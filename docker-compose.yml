@@ -1,0 +1,38 @@
+services:
+  # 1. Le conteneur Base de données (PostgreSQL + PostGIS)
+  postgres-db:
+    image: postgis/postgis:15-3.4 # Image PostgreSQL avec PostGIS pré-installé
+    container_name: numerum-dechets-db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - '5435:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - numerum-network
+
+  # 2. Le conteneur pgAdmin (Interface Web pour voir la BDD)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: numerum-dechets-pgadmin
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5051:80"
+    depends_on:
+      - postgres-db
+    networks:
+      - numerum-network
+
+volumes:
+  pgdata:
+
+networks:
+  numerum-network:
+    driver: bridge
