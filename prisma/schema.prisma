@@ -26,6 +26,7 @@ model User {
   emailVerified Boolean  @default(false)
   phone         String
   password      String
+  hashedRefreshToken String?
   role          Role     @default(USAGER)
   isActive      Boolean  @default(true)
 }

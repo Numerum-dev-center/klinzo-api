@@ -77,4 +77,34 @@ export class UserService {
       where: { trackingId },
     });
   }
+
+  // --- Méthodes internes pour l'Auth ---
+
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+    });
+  }
+
+  async findByTrackingIdForAuth(trackingId: string) {
+    return this.prisma.user.findUnique({
+      where: { trackingId },
+    });
+  }
+
+  async updateRefreshToken(trackingId: string, refreshToken: string): Promise<void> {
+    const salt = await bcrypt.genSalt(10);
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
+    await this.prisma.user.update({
+      where: { trackingId },
+      data: { hashedRefreshToken },
+    });
+  }
+
+  async removeRefreshToken(trackingId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { trackingId },
+      data: { hashedRefreshToken: null },
+    });
+  }
 }
