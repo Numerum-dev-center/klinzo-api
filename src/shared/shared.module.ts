@@ -5,6 +5,7 @@ import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [ConfigModule, SecurityModule],
-  providers: [PrismaService]
+  providers: [PrismaService],
+  exports: [PrismaService],
 })
 export class SharedModule {}
