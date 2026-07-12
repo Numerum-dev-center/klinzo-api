@@ -9,6 +9,8 @@ import {
 } from 'class-validator';
 import { Role } from '@prisma/client';
 
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
 export class CreateUserByAdminDto {
   @IsString()
   @IsNotEmpty()
@@ -37,6 +39,7 @@ export class CreateUserByAdminDto {
   @IsOptional()
   isActive?: boolean;
 
+  @ApiPropertyOptional({ description: 'ID du collecteur (obligatoire pour ADMIN_COLLECTEUR et AGENT_COLLECTEUR)' })
   @IsString()
   @IsOptional()
   collectorTrackingId?: string;

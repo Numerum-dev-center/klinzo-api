@@ -2,7 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
@@ -16,6 +18,19 @@ import { PageDto } from '../../shared/pagination/dto/page.dto';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private validateRoleAndCollector(role: Role, collectorTrackingId?: string) {
+    const isSaaSRole = ([Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS] as Role[]).includes(role);
+    const isCollectorRole = ([Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR] as Role[]).includes(role);
+
+    if (isSaaSRole && collectorTrackingId) {
+      throw new BadRequestException("Un membre de l'équipe SaaS ne peut pas être rattaché à un collecteur.");
+    }
+    
+    if (isCollectorRole && !collectorTrackingId) {
+      throw new BadRequestException(`Un utilisateur avec le rôle ${role} doit obligatoirement fournir un collectorTrackingId.`);
+    }
+  }
+
   async create(createUserDto: any): Promise<UserEntity> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
@@ -25,11 +40,12 @@ export class UserService {
       throw new ConflictException('Email already in use');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+    const { collectorTrackingId, role, ...rest } = createUserDto;
 
-    const { collectorTrackingId, ...rest } = createUserDto;
+    // 1. Validation Métier
+    this.validateRoleAndCollector(role, collectorTrackingId);
 
+    // 2. Vérification de l'existence du collecteur (uniquement s'il est fourni)
     let collectorId: bigint | undefined;
     if (collectorTrackingId) {
       const collector = await this.prisma.collector.findUnique({
@@ -39,9 +55,15 @@ export class UserService {
       collectorId = collector.id;
     }
 
+    // 3. Hashage du mot de passe
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(rest.password, salt);
+
+    // 4. Création
     const user = await this.prisma.user.create({
       data: {
         ...rest,
+        role,
         password: hashedPassword,
         ...(collectorId ? { collector: { connect: { id: collectorId } } } : {}),
       },
