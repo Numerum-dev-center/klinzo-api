@@ -30,3 +30,34 @@ model User {
   role          Role     @default(USAGER)
   isActive      Boolean  @default(true)
 }
+
+enum KycStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum CollectorType {
+  INDIVIDUAL
+  COMPANY
+  MUNICIPALITY
+  ASSOCIATION
+}
+
+model Collector {
+  id                 BigInt        @id @default(autoincrement())
+  trackingId         String        @unique @default(uuid())
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  companyName        String
+  registrationNumber String
+  contactEmail       String
+  contactPhone       String
+  type               CollectorType
+  adresse            String
+  kycStatus          KycStatus     @default(PENDING_REVIEW)
+  ratingAverage      Float         @default(0.0)
+  payoutAccount      String?
+  isActive           Boolean       @default(true)
+}
