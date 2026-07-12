@@ -29,6 +29,8 @@ model User {
   hashedRefreshToken String?
   role          Role     @default(USAGER)
   isActive      Boolean  @default(true)
+  collectorId   BigInt?
+  collector     Collector? @relation(fields: [collectorId], references: [id])
 }
 
 enum KycStatus {
@@ -60,4 +62,5 @@ model Collector {
   ratingAverage      Float         @default(0.0)
   payoutAccount      String?
   isActive           Boolean       @default(true)
+  users              User[]
 }

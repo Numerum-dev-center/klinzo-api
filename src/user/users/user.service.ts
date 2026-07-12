@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
@@ -12,7 +16,7 @@ import { PageDto } from '../../shared/pagination/dto/page.dto';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<UserEntity> {
+  async create(createUserDto: any): Promise<UserEntity> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
     });
@@ -24,14 +28,26 @@ export class UserService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
 
+    const { collectorTrackingId, ...rest } = createUserDto;
+
+    let collectorId: bigint | undefined;
+    if (collectorTrackingId) {
+      const collector = await this.prisma.collector.findUnique({
+        where: { trackingId: collectorTrackingId },
+      });
+      if (!collector) throw new NotFoundException('Collector introuvable');
+      collectorId = collector.id;
+    }
+
     const user = await this.prisma.user.create({
       data: {
-        ...createUserDto,
+        ...rest,
         password: hashedPassword,
+        ...(collectorId ? { collector: { connect: { id: collectorId } } } : {}),
       },
     });
 
-    return new UserEntity(user as any);
+    return new UserEntity(user);
   }
 
   async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<UserEntity>> {
@@ -41,7 +57,34 @@ export class UserService {
       take: pageOptionsDto.size,
       orderBy: { createdAt: 'desc' },
     });
-    
+
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+    const entities = users.map((user) => new UserEntity(user as any));
+
+    return new PageDto(entities, pageMetaDto);
+  }
+
+  async findAllByCollector(
+    collectorTrackingId: string,
+    pageOptionsDto: PageOptionsDto,
+  ): Promise<PageDto<UserEntity>> {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId: collectorTrackingId },
+    });
+
+    if (!collector) {
+      throw new NotFoundException('Collector not found');
+    }
+
+    const where = { collectorId: collector.id };
+    const itemCount = await this.prisma.user.count({ where });
+    const users = await this.prisma.user.findMany({
+      where,
+      skip: pageOptionsDto.skip,
+      take: pageOptionsDto.size,
+      orderBy: { createdAt: 'desc' },
+    });
+
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
     const entities = users.map((user) => new UserEntity(user as any));
 
@@ -54,13 +97,18 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with trackingId ${trackingId} not found`);
+      throw new NotFoundException(
+        `User with trackingId ${trackingId} not found`,
+      );
     }
 
-    return new UserEntity(user as any);
+    return new UserEntity(user);
   }
 
-  async update(trackingId: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
+  async update(
+    trackingId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UserEntity> {
     await this.findOne(trackingId); // Ensure user exists
 
     let hashedPassword: string | undefined;
@@ -79,7 +127,7 @@ export class UserService {
       data: updateData,
     });
 
-    return new UserEntity(updatedUser as any);
+    return new UserEntity(updatedUser);
   }
 
   async remove(trackingId: string): Promise<void> {
@@ -104,7 +152,10 @@ export class UserService {
     });
   }
 
-  async updateRefreshToken(trackingId: string, refreshToken: string): Promise<void> {
+  async updateRefreshToken(
+    trackingId: string,
+    refreshToken: string,
+  ): Promise<void> {
     const salt = await bcrypt.genSalt(10);
     const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
     await this.prisma.user.update({

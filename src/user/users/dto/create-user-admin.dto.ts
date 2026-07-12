@@ -36,4 +36,8 @@ export class CreateUserByAdminDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsString()
+  @IsOptional()
+  collectorTrackingId?: string;
 }

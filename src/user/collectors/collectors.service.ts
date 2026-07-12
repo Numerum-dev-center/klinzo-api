@@ -8,6 +8,9 @@ import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
 import { PageDto } from '../../shared/pagination/dto/page.dto';
 import { CollectorType } from './entities/enums/collector-type.enum';
 import { KycStatus } from './entities/enums/kyc-status.enum';
+import { SearchCollectorDto } from './dto/request/search-collector.dto';
+import { KycStatusFilterDto } from './dto/request/kyc-status-filter.dto';
+import { TypeFilterDto } from './dto/request/type-filter.dto';
 
 @Injectable()
 export class CollectorsService {
@@ -56,7 +59,13 @@ export class CollectorsService {
 
   async remove(trackingId: string): Promise<void> {
     await this.findOne(trackingId);
-    await this.prisma.collector.delete({ where: { trackingId } });
+    await this.prisma.collector.update({ 
+      where: { trackingId },
+      data: {
+        isActive: false,
+        kycStatus: KycStatus.SUSPENDED
+      }
+    });
   }
 
   async getActiveCollectors(pageOptionsDto: PageOptionsDto): Promise<PageDto<CollectorResponse>> {
@@ -87,11 +96,52 @@ export class CollectorsService {
     return new PageDto(entities, pageMetaDto);
   }
 
-  getCollectorTypes(): string[] {
-    return Object.values(CollectorType);
+  async search(searchDto: SearchCollectorDto): Promise<PageDto<CollectorResponse>> {
+    const where = {
+      OR: [
+        { companyName: { contains: searchDto.keyword, mode: 'insensitive' } as any },
+        { registrationNumber: { contains: searchDto.keyword, mode: 'insensitive' } as any },
+        { contactEmail: { contains: searchDto.keyword, mode: 'insensitive' } as any },
+        { adresse: { contains: searchDto.keyword, mode: 'insensitive' } as any },
+      ]
+    };
+    const itemCount = await this.prisma.collector.count({ where });
+    const collectors = await this.prisma.collector.findMany({
+      where,
+      skip: searchDto.skip,
+      take: searchDto.size,
+      orderBy: { createdAt: 'desc' },
+    });
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto: searchDto });
+    const entities = collectors.map(c => new CollectorResponse(c as any));
+    return new PageDto(entities, pageMetaDto);
   }
 
-  getKycStatuses(): string[] {
-    return Object.values(KycStatus);
+  async findByType(typeDto: TypeFilterDto): Promise<PageDto<CollectorResponse>> {
+    const where = { type: typeDto.type };
+    const itemCount = await this.prisma.collector.count({ where });
+    const collectors = await this.prisma.collector.findMany({
+      where,
+      skip: typeDto.skip,
+      take: typeDto.size,
+      orderBy: { createdAt: 'desc' },
+    });
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto: typeDto });
+    const entities = collectors.map(c => new CollectorResponse(c as any));
+    return new PageDto(entities, pageMetaDto);
+  }
+
+  async findByKycStatus(kycDto: KycStatusFilterDto): Promise<PageDto<CollectorResponse>> {
+    const where = { kycStatus: kycDto.status };
+    const itemCount = await this.prisma.collector.count({ where });
+    const collectors = await this.prisma.collector.findMany({
+      where,
+      skip: kycDto.skip,
+      take: kycDto.size,
+      orderBy: { createdAt: 'desc' },
+    });
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto: kycDto });
+    const entities = collectors.map(c => new CollectorResponse(c as any));
+    return new PageDto(entities, pageMetaDto);
   }
 }

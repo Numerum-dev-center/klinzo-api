@@ -18,8 +18,11 @@ import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
 
+@ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 class UserController {
@@ -37,6 +40,16 @@ class UserController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   findAll(@Query() pageOptionsDto: PageOptionsDto) {
     return this.userService.findAll(pageOptionsDto);
+  }
+
+  @Get('collector/:collectorTrackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
+  findAllByCollector(
+    @Param('collectorTrackingId') collectorTrackingId: string,
+    @Query() pageOptionsDto: PageOptionsDto,
+  ) {
+    return this.userService.findAllByCollector(collectorTrackingId, pageOptionsDto);
   }
 
   @Get(':trackingId')
