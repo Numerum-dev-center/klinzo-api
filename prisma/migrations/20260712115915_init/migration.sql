@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN_SAAS', 'GESTIONNAIRE_SAAS', 'SUPPORT_SAAS', 'ADMIN_COLLECTEUR', 'AGENT_COLLECTEUR', 'USAGER');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -13,7 +13,8 @@ CREATE TABLE "User" (
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "phone" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'USER',
+    "hashedRefreshToken" TEXT,
+    "role" "Role" NOT NULL DEFAULT 'USAGER',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
