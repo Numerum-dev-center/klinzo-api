@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { OperationService } from './operation.service';
-import { OperationController } from './operation.controller';
+import { TourModule } from './tour/tour.module';
+import { RatingModule } from './rating/rating.module';
+import { CollectionEvenModule } from './collection-even/collection-even.module';
 
 @Module({
-  controllers: [OperationController],
-  providers: [OperationService],
+  imports: [TourModule, RatingModule, CollectionEvenModule],
 })
 export class OperationModule {}

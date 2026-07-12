@@ -10,6 +10,11 @@ async function bootstrap() {
   app.enableCors();
   app.use(helmet());
 
+  // Patch pour la sérialisation des BigInt
+  (BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+  };
+
   // Configuration Swagger
   setupSwagger(app);
 

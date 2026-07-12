@@ -1,13 +1,14 @@
-import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../user/dto/create-user.dto';
+import { CreateUserDto } from '../user/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../shared/security/jwt-auth.guard';
-import { JwtRefreshGuard } from '../shared/security/jwt-refresh.guard';
 import { CurrentUser } from '../shared/security/current-user.decorator';
-import { UserService } from '../user/user.service';
+import { UserService } from '../user/users/user.service';
 
 @Controller('auth')
+@UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -33,11 +34,10 @@ export class AuthController {
     return { message: 'Déconnexion réussie' };
   }
 
-  @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshTokens(@CurrentUser() user: any) {
-    return this.authService.refreshTokens(user.trackingId, user.refreshToken);
+  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { UserService } from '../user/user.service';
+import { UserService } from '../user/users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from '../user/dto/create-user.dto';
+import { CreateUserDto } from '../user/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
@@ -20,19 +20,29 @@ export class AuthService {
     const userDto = { ...createUserDto, role: Role.USAGER };
     const user = await this.userService.create(userDto);
     const tokens = await this.getTokens(user.trackingId, user.email, user.role);
-    await this.userService.updateRefreshToken(user.trackingId, tokens.refreshToken);
-    return tokens;
+    await this.userService.updateRefreshToken(
+      user.trackingId,
+      tokens.refreshToken,
+    );
+    return { user, tokens };
   }
 
   async login(loginDto: LoginDto) {
     const user = await this.userService.findByEmail(loginDto.email);
     if (!user) throw new UnauthorizedException('Identifiants invalides');
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
-    if (!isPasswordValid) throw new UnauthorizedException('Identifiants invalides');
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
+    if (!isPasswordValid)
+      throw new UnauthorizedException('Identifiants invalides');
 
     const tokens = await this.getTokens(user.trackingId, user.email, user.role);
-    await this.userService.updateRefreshToken(user.trackingId, tokens.refreshToken);
+    await this.userService.updateRefreshToken(
+      user.trackingId,
+      tokens.refreshToken,
+    );
     return tokens;
   }
 
@@ -40,20 +50,34 @@ export class AuthService {
     await this.userService.removeRefreshToken(trackingId);
   }
 
-  async refreshTokens(trackingId: string, refreshToken: string) {
-    const user = await this.userService.findByTrackingIdForAuth(trackingId);
-    if (!user || !user.hashedRefreshToken) {
-      throw new ForbiddenException('Access denied');
-    }
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET')!,
+      });
 
-    const refreshTokenMatches = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
-    if (!refreshTokenMatches) {
-      throw new ForbiddenException('Access denied');
-    }
+      const user = await this.userService.findByTrackingIdForAuth(payload.sub);
+      if (!user || !user.hashedRefreshToken) {
+        throw new ForbiddenException('Access denied');
+      }
 
-    const tokens = await this.getTokens(user.trackingId, user.email, user.role);
-    await this.userService.updateRefreshToken(user.trackingId, tokens.refreshToken);
-    return tokens;
+      const refreshTokenMatches = await bcrypt.compare(
+        refreshToken,
+        user.hashedRefreshToken,
+      );
+      if (!refreshTokenMatches) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      const tokens = await this.getTokens(user.trackingId, user.email, user.role);
+      await this.userService.updateRefreshToken(
+        user.trackingId,
+        tokens.refreshToken,
+      );
+      return tokens;
+    } catch (e) {
+      throw new ForbiddenException('Invalid refresh token');
+    }
   }
 
   async getTokens(trackingId: string, email: string, role: string) {
@@ -66,7 +90,9 @@ export class AuthService {
       }),
       this.jwtService.signAsync(jwtPayload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET')!,
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION')! as any,
+        expiresIn: this.configService.get<string>(
+          'JWT_REFRESH_EXPIRATION',
+        )! as any,
       }),
     ]);
 
