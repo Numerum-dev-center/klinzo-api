@@ -1,11 +1,11 @@
 import { Controller, Post, Body, UseGuards, Get, HttpCode, HttpStatus, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../user/dto/create-user.dto';
+import { CreateUserDto } from '../user/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../shared/security/jwt-auth.guard';
 import { CurrentUser } from '../shared/security/current-user.decorator';
-import { UserService } from '../user/user.service';
+import { UserService } from '../user/users/user.service';
 
 @Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)

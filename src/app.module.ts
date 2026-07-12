@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
+import { UserModule } from './user/users/user.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { OperationModule } from './operation/operation.module';

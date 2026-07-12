@@ -1,8 +1,8 @@
 import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { UserService } from '../user/user.service';
+import { UserService } from '../user/users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from '../user/dto/create-user.dto';
+import { CreateUserDto } from '../user/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
