@@ -47,6 +47,59 @@ enum CollectorType {
   ASSOCIATION
 }
 
+model Vehicle {
+  id                 BigInt     @id @default(autoincrement())
+  trackingId         String     @unique @default(uuid())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  matricule          String     @unique
+  licensePlate       String
+  type               String
+  capacity           Int
+  isActive           Boolean    @default(true)
+  collectorId        BigInt
+  collector          Collector  @relation(fields: [collectorId], references: [id])
+}
+
+model Zone {
+  id               BigInt     @id @default(autoincrement())
+  trackingId       String     @unique @default(uuid())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  name             String
+  city             String
+  polygonPostgis   Unsupported("geometry(Polygon, 4326)")?
+  isActive         Boolean    @default(true)
+  collectorZones   CollectorZone[]
+  offers           Offer[]
+}
+
+model CollectorZone {
+  collectorId BigInt
+  zoneId      BigInt
+  collector   Collector @relation(fields: [collectorId], references: [id])
+  zone        Zone      @relation(fields: [zoneId], references: [id])
+  assignedAt  DateTime  @default(now())
+
+  @@id([collectorId, zoneId])
+}
+
+model Offer {
+  id               BigInt     @id @default(autoincrement())
+  trackingId       String     @unique @default(uuid())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  name             String
+  price            Float
+  frequency        String
+  wasteType        String
+  isActive         Boolean    @default(true)
+  collectorId      BigInt
+  collector        Collector  @relation(fields: [collectorId], references: [id])
+  zoneId           BigInt
+  zone             Zone       @relation(fields: [zoneId], references: [id])
+}
+
 model Collector {
   id                 BigInt        @id @default(autoincrement())
   trackingId         String        @unique @default(uuid())
@@ -63,4 +116,7 @@ model Collector {
   payoutAccount      String?
   isActive           Boolean       @default(true)
   users              User[]
+  vehicles           Vehicle[]
+  collectorZones     CollectorZone[]
+  offers             Offer[]
 }
