@@ -17,19 +17,33 @@ export class ZonesService {
     // Using SQL RAW due to PostGIS constraints
     const result = await this.prisma.$queryRaw<any[]>`
       INSERT INTO "Zone" (
-        "trackingId", name, city, "collectorId", "polygonPostgis", "updatedAt"
+        "trackingId", name, city, "polygonPostgis", "updatedAt"
       ) VALUES (
         gen_random_uuid(), 
         ${createZoneDto.name}, 
         ${createZoneDto.city}, 
-        ${collector.id}, 
         ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326), 
         NOW()
       ) 
       RETURNING "trackingId", name, city, "isActive", "createdAt", "updatedAt", ST_AsGeoJSON("polygonPostgis")::json as geojson;
     `;
 
-    return result[0];
+    const newZone = result[0];
+
+    // Automatically assign the creator if provided
+    if (collector) {
+      const zoneDb = await this.prisma.zone.findUnique({ where: { trackingId: newZone.trackingId }});
+      if (zoneDb) {
+        await this.prisma.collectorZone.create({
+          data: {
+            collectorId: collector.id,
+            zoneId: zoneDb.id
+          }
+        });
+      }
+    }
+
+    return newZone;
   }
 
   async findAll() {
@@ -52,4 +66,43 @@ export class ZonesService {
   }
 
   // Update and remove left simple for MVP PostGIS
+
+  async assignCollectors(zoneTrackingId: string, collectorTrackingIds: string[]) {
+    const zone = await this.prisma.zone.findUnique({ where: { trackingId: zoneTrackingId } });
+    if (!zone) throw new NotFoundException('Zone not found');
+
+    const collectors = await this.prisma.collector.findMany({
+      where: { trackingId: { in: collectorTrackingIds } }
+    });
+
+    if (collectors.length === 0) throw new NotFoundException('No valid collectors found');
+
+    const data = collectors.map(c => ({
+      collectorId: c.id,
+      zoneId: zone.id
+    }));
+
+    // Ignore duplicates if they are already assigned (Prisma createMany with skipDuplicates)
+    await this.prisma.collectorZone.createMany({
+      data,
+      skipDuplicates: true,
+    });
+
+    return { message: `${collectors.length} collecteurs assignés avec succès à la zone` };
+  }
+
+  async findZonesByCollector(collectorTrackingId: string) {
+    const collector = await this.prisma.collector.findUnique({ where: { trackingId: collectorTrackingId } });
+    if (!collector) throw new NotFoundException('Collector not found');
+
+    // M:N raw query to fetch zones and their geojson
+    const result = await this.prisma.$queryRaw`
+      SELECT z."trackingId", z.name, z.city, z."isActive", z."createdAt", z."updatedAt", ST_AsGeoJSON(z."polygonPostgis")::json as geojson
+      FROM "Zone" z
+      INNER JOIN "CollectorZone" cz ON z.id = cz."zoneId"
+      WHERE cz."collectorId" = ${collector.id}
+      ORDER BY z."createdAt" DESC;
+    `;
+    return result;
+  }
 }

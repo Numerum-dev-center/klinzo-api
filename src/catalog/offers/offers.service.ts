@@ -68,6 +68,26 @@ export class OffersService {
     return new PageDto(entities, pageMetaDto);
   }
 
+  async findAllByCollector(collectorTrackingId: string, pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferResponse>> {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId: collectorTrackingId }
+    });
+    if (!collector) throw new NotFoundException('Collector not found');
+
+    const where = { collectorId: collector.id };
+    const itemCount = await this.prisma.offer.count({ where });
+    const offers = await this.prisma.offer.findMany({
+      where,
+      skip: pageOptionsDto.skip,
+      take: pageOptionsDto.size,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+    const entities = offers.map(o => new OfferResponse(o as any));
+    return new PageDto(entities, pageMetaDto);
+  }
+
   async findOne(trackingId: string): Promise<OfferResponse> {
     const offer = await this.prisma.offer.findUnique({ where: { trackingId } });
     if (!offer) throw new NotFoundException('Offer not found');

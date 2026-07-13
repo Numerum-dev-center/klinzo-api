@@ -40,6 +40,16 @@ export class OffersController {
     return this.offersService.findAllByZone(zoneTrackingId, pageOptionsDto);
   }
 
+  @Get('collector/:collectorTrackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  findAllByCollector(
+    @Param('collectorTrackingId') collectorTrackingId: string,
+    @Query() pageOptionsDto: PageOptionsDto
+  ) {
+    return this.offersService.findAllByCollector(collectorTrackingId, pageOptionsDto);
+  }
+
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)

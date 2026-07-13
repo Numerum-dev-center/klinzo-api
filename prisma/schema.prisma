@@ -70,9 +70,18 @@ model Zone {
   city             String
   polygonPostgis   Unsupported("geometry(Polygon, 4326)")?
   isActive         Boolean    @default(true)
-  collectorId      BigInt
-  collector        Collector  @relation(fields: [collectorId], references: [id])
+  collectorZones   CollectorZone[]
   offers           Offer[]
+}
+
+model CollectorZone {
+  collectorId BigInt
+  zoneId      BigInt
+  collector   Collector @relation(fields: [collectorId], references: [id])
+  zone        Zone      @relation(fields: [zoneId], references: [id])
+  assignedAt  DateTime  @default(now())
+
+  @@id([collectorId, zoneId])
 }
 
 model Offer {
@@ -108,6 +117,6 @@ model Collector {
   isActive           Boolean       @default(true)
   users              User[]
   vehicles           Vehicle[]
-  zones              Zone[]
+  collectorZones     CollectorZone[]
   offers             Offer[]
 }
