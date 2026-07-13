@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ZoneModule } from './zone/zone.module';
-import { OffreModule } from './offre/offre.module';
-import { VehiculeModule } from './vehicule/vehicule.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { ZonesModule } from './zones/zones.module';
+import { OffersModule } from './offers/offers.module';
 
 @Module({
-  imports: [ZoneModule, OffreModule, VehiculeModule],
+  imports: [VehiclesModule, ZonesModule, OffersModule],
 })
 export class CatalogModule {}
