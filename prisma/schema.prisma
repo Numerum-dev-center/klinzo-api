@@ -16,21 +16,22 @@ enum Role {
 }
 
 model User {
-  id            BigInt   @id @default(autoincrement())
-  trackingId    String   @unique @default(uuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  firstName     String
-  lastName      String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  phone         String
-  password      String
+  id                 BigInt         @id @default(autoincrement())
+  trackingId         String         @unique @default(uuid())
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  firstName          String
+  lastName           String
+  email              String         @unique
+  emailVerified      Boolean        @default(false)
+  phone              String
+  password           String
   hashedRefreshToken String?
-  role          Role     @default(USAGER)
-  isActive      Boolean  @default(true)
-  collectorId   BigInt?
-  collector     Collector? @relation(fields: [collectorId], references: [id])
+  role               Role           @default(USAGER)
+  isActive           Boolean        @default(true)
+  collectorId        BigInt?
+  collector          Collector?     @relation(fields: [collectorId], references: [id])
+  subscriptions      Subscription[]
 }
 
 enum KycStatus {
@@ -48,30 +49,30 @@ enum CollectorType {
 }
 
 model Vehicle {
-  id                 BigInt     @id @default(autoincrement())
-  trackingId         String     @unique @default(uuid())
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  matricule          String     @unique
-  licensePlate       String
-  type               String
-  capacity           Int
-  isActive           Boolean    @default(true)
-  collectorId        BigInt
-  collector          Collector  @relation(fields: [collectorId], references: [id])
+  id           BigInt    @id @default(autoincrement())
+  trackingId   String    @unique @default(uuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  matricule    String    @unique
+  licensePlate String
+  type         String
+  capacity     Int
+  isActive     Boolean   @default(true)
+  collectorId  BigInt
+  collector    Collector @relation(fields: [collectorId], references: [id])
 }
 
 model Zone {
-  id               BigInt     @id @default(autoincrement())
-  trackingId       String     @unique @default(uuid())
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  name             String
-  city             String
-  polygonPostgis   Unsupported("geometry(Polygon, 4326)")?
-  isActive         Boolean    @default(true)
-  collectorZones   CollectorZone[]
-  offers           Offer[]
+  id             BigInt                                  @id @default(autoincrement())
+  trackingId     String                                  @unique @default(uuid())
+  createdAt      DateTime                                @default(now())
+  updatedAt      DateTime                                @updatedAt
+  name           String
+  city           String
+  polygonPostgis Unsupported("geometry(Polygon, 4326)")?
+  isActive       Boolean                                 @default(true)
+  collectorZones CollectorZone[]
+  offers         Offer[]
 }
 
 model CollectorZone {
@@ -85,38 +86,69 @@ model CollectorZone {
 }
 
 model Offer {
-  id               BigInt     @id @default(autoincrement())
-  trackingId       String     @unique @default(uuid())
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  name             String
-  price            Float
-  frequency        String
-  wasteType        String
-  isActive         Boolean    @default(true)
-  collectorId      BigInt
-  collector        Collector  @relation(fields: [collectorId], references: [id])
-  zoneId           BigInt
-  zone             Zone       @relation(fields: [zoneId], references: [id])
+  id            BigInt         @id @default(autoincrement())
+  trackingId    String         @unique @default(uuid())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  name          String
+  price         Float
+  frequency     String
+  wasteType     String
+  isActive      Boolean        @default(true)
+  collectorId   BigInt
+  collector     Collector      @relation(fields: [collectorId], references: [id])
+  zoneId        BigInt
+  zone          Zone           @relation(fields: [zoneId], references: [id])
+  subscriptions Subscription[]
 }
 
 model Collector {
-  id                 BigInt        @id @default(autoincrement())
-  trackingId         String        @unique @default(uuid())
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                 BigInt          @id @default(autoincrement())
+  trackingId         String          @unique @default(uuid())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   companyName        String
   registrationNumber String
   contactEmail       String
   contactPhone       String
   type               CollectorType
   adresse            String
-  kycStatus          KycStatus     @default(PENDING_REVIEW)
-  ratingAverage      Float         @default(0.0)
+  kycStatus          KycStatus       @default(PENDING_REVIEW)
+  ratingAverage      Float           @default(0.0)
   payoutAccount      String?
-  isActive           Boolean       @default(true)
+  isActive           Boolean         @default(true)
   users              User[]
   vehicles           Vehicle[]
   collectorZones     CollectorZone[]
   offers             Offer[]
+}
+
+model Subscription {
+  id         Int      @id @default(autoincrement())
+  trackingId String   @unique @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  qrCodeId String
+
+  gpsLocation Unsupported("geography(Point,4326)")
+
+  addressText String
+
+  status          SubscriptionStatus
+  startDate       DateTime
+  nextBillingDate DateTime
+
+  userId  BigInt
+  offerId BigInt
+
+  user  User  @relation(fields: [userId], references: [id])
+  offer Offer @relation(fields: [offerId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  PENDING_PAYMENT
 }
