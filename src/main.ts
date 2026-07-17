@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Sécurité Globale
-  app.enableCors();
+  app.enableCors({ origin: '*' });
   app.use(helmet());
 
   // Validation globale et transformation (Ex: String "10" -> Number 10)
