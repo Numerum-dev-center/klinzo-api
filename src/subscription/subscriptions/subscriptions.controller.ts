@@ -6,21 +6,36 @@ import {
   Param,
   Patch,
   Delete,
-  ParseIntPipe,
 } from '@nestjs/common';
 
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { Query } from '@nestjs/common';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+import { RolesGuard } from '../../shared/security/roles.guard';
+import { Roles } from '../../shared/security/roles.decorator';
+import { Role } from '@prisma/client';
 
+@ApiTags('Subscriptions')
+@ApiBearerAuth()
 @Controller('subscriptions')
 export class SubscriptionsController {
+
   constructor(
     private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+  )
   create(
     @Body() createSubscriptionDto: CreateSubscriptionDto,
   ) {
@@ -29,35 +44,55 @@ export class SubscriptionsController {
 
 
   @Get()
-  findAll() {
-    return this.subscriptionsService.findAll();
-  }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+      Role.SUPER_ADMIN_SAAS,
+      Role.GESTIONNAIRE_SAAS,
+  )    
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    ) {
+
+    return this.subscriptionsService.findAll(
+        pagination.page ?? 1,
+        pagination.limit ?? 10,
+    );
+
+    }
 
 
-  @Get(':id')
+  @Get(':trackingId')
+  @UseGuards(JwtAuthGuard)
   findOne(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('trackingId') trackingId: string,
   ) {
-    return this.subscriptionsService.findOne(id);
+    return this.subscriptionsService.findOne(trackingId);
   }
 
 
-  @Patch(':id')
+  @Patch(':trackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+  )
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('trackingId') trackingId: string,
     @Body() updateSubscriptionDto: UpdateSubscriptionDto,
   ) {
     return this.subscriptionsService.update(
-      id,
+      trackingId,
       updateSubscriptionDto,
     );
   }
 
 
-  @Delete(':id')
+  @Delete(':trackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS)
   remove(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('trackingId') trackingId: string,
   ) {
-    return this.subscriptionsService.remove(id);
+    return this.subscriptionsService.remove(trackingId);
   }
 }

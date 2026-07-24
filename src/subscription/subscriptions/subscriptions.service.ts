@@ -1,101 +1,168 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { SubscriptionRepository } from './subscriptions.repository';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { SubscriptionResponseDto } from './dto/subscription-response.dto';
+import { CreateSubscriptionDataDto } from './dto/create-subscription-data.dto';
 
 @Injectable()
 export class SubscriptionsService {
+
   constructor(
+    private readonly subscriptionRepository: SubscriptionRepository,
     private readonly prisma: PrismaService,
-  ) {}
-
-  async create(createSubscriptionDto: CreateSubscriptionDto) {
-    const {
-      latitude,
-      longitude,
-      ...subscriptionData
-    } = createSubscriptionDto;
-
-    return this.prisma.$queryRaw`
-      INSERT INTO "Subscription"
-      (
-        "qrCodeId",
-        "gpsLocation",
-        "addressText",
-        "status",
-        "startDate",
-        "nextBillingDate",
-        "userId",
-        "offerId",
-        "trackingId",
-        "createdAt",
-        "updatedAt"
-      )
-      VALUES
-      (
-        ${subscriptionData.qrCodeId},
-        ST_SetSRID(
-          ST_MakePoint(${longitude}, ${latitude}),
-          4326
-        )::geography,
-        ${subscriptionData.addressText},
-        ${subscriptionData.status}::"SubscriptionStatus",
-        ${subscriptionData.startDate},
-        ${subscriptionData.nextBillingDate},
-        ${subscriptionData.userId},
-        ${subscriptionData.offerId},
-        gen_random_uuid(),
-        NOW(),
-        NOW()
-      )
-      RETURNING *
-    `;
-  }
+  ){}
 
 
-  async findAll() {
-    return this.prisma.subscription.findMany({
-      include: {
-        user: true,
-        offer: true,
+
+  async create(dto:CreateSubscriptionDto){
+
+    const user = await this.prisma.user.findUnique({
+      where:{
+        trackingId: dto.userTrackingId,
       },
     });
-  }
 
 
-  async findOne(id: number) {
-    return this.prisma.subscription.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        user: true,
-        offer: true,
-      },
-    });
-  }
+    if(!user){
+      throw new NotFoundException('User not found');
+    }
 
 
-  async update(
-    id: number,
-    updateSubscriptionDto: UpdateSubscriptionDto,
-  ) {
-    return this.prisma.subscription.update({
-      where: {
-        id,
-      },
-      data: {
-        ...updateSubscriptionDto,
+    const offer = await this.prisma.offer.findUnique({
+      where:{
+        trackingId: dto.offerTrackingId,
       },
     });
+
+
+    if(!offer){
+      throw new NotFoundException('Offer not found');
+    }
+
+
+        const data: CreateSubscriptionDataDto = {
+          ...dto,
+          userId: user.id,
+          offerId: offer.id,
+        };
+
+        return this.subscriptionRepository.create(data);
   }
 
 
-  async remove(id: number) {
-    return this.prisma.subscription.delete({
-      where: {
-        id,
-      },
-    });
+
+    async findAll(page:number, limit:number){
+
+    const result =
+        await this.subscriptionRepository.findAll(
+        page,
+        limit,
+        );
+
+
+    return {
+          data: result.data.map(subscription => this.toResponseDto(subscription),),
+        
+        meta:{
+        page,
+        limit,
+        total: result.total,
+        totalPages: Math.ceil(
+            result.total / limit
+        ),
+        },
+    };
+
+    }
+
+
+
+    async findOne(trackingId: string) {
+
+    const subscription =
+    await this.subscriptionRepository.findOne(trackingId);
+
+
+    if(!subscription){
+    throw new NotFoundException(
+        'Subscription not found !!'
+    );
+    }
+    
+    return this.toResponseDto(subscription);    
   }
+
+
+
+ async update(
+    trackingId: string,
+    dto: UpdateSubscriptionDto,
+    ) {
+
+    const subscription =
+        await this.subscriptionRepository.findOne(trackingId);
+
+
+    if (!subscription) {
+        throw new NotFoundException(
+        'Subscription not found',
+        );
+    }
+
+
+    return this.subscriptionRepository.update(
+        trackingId,
+        dto,
+    );
+    }
+
+
+
+    async remove(trackingId: string) {
+
+  const subscription =
+    await this.subscriptionRepository.findOne(trackingId);
+
+
+  if (!subscription) {
+    throw new NotFoundException(
+      'Subscription not found',
+    );
+  }
+
+
+  return this.subscriptionRepository.remove(
+    trackingId,
+    );
+    }
+
+
+    private toResponseDto(subscription: any): SubscriptionResponseDto {
+  return {
+    trackingId: subscription.trackingId,
+    qrCodeId: subscription.qrCodeId,
+    addressText: subscription.addressText,
+    status: subscription.status,
+    startDate: subscription.startDate,
+    nextBillingDate: subscription.nextBillingDate,
+    createdAt: subscription.createdAt,
+    updatedAt: subscription.updatedAt,
+
+    user: {
+      trackingId: subscription.user.trackingId,
+      firstName: subscription.user.firstName,
+      lastName: subscription.user.lastName,
+      email: subscription.user.email,
+    },
+
+    offer: {
+      trackingId: subscription.offer.trackingId,
+      name: subscription.offer.name,
+      price: subscription.offer.price,
+      frequency: subscription.offer.frequency,
+    },
+  };
+}
 }
