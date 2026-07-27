@@ -31,6 +31,7 @@ model User {
   isActive      Boolean  @default(true)
   collectorId   BigInt?
   collector     Collector? @relation(fields: [collectorId], references: [id])
+  subscriptions Subscription[]
 }
 
 enum KycStatus {
@@ -98,6 +99,7 @@ model Offer {
   collector        Collector  @relation(fields: [collectorId], references: [id])
   zoneId           BigInt
   zone             Zone       @relation(fields: [zoneId], references: [id])
+  subscriptions    Subscription[]
 }
 
 model Collector {
@@ -119,4 +121,27 @@ model Collector {
   vehicles           Vehicle[]
   collectorZones     CollectorZone[]
   offers             Offer[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PENDING_PAYMENT
+}
+
+model Subscription {
+  id               BigInt     @id @default(autoincrement())
+  trackingId       String     @unique @default(uuid())
+  qrCodeId         String     @unique
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  gpsLocation      Unsupported("geometry(Point, 4326)")?
+  addressText      String
+  status           SubscriptionStatus @default(PENDING_PAYMENT)
+  startDate        DateTime   @default(now())
+  nextBillingDate  DateTime?
+  userId           BigInt
+  user             User       @relation(fields: [userId], references: [id])
+  offerId          BigInt
+  offer            Offer      @relation(fields: [offerId], references: [id])
 }

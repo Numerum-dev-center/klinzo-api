@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TransactionsModule } from './transactions/transactions.module';
+import { SubscriptionService } from './subscription.service';
+import { SubscriptionController } from './subscription.controller';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
-  imports: [TransactionsModule],
+  imports: [SharedModule],
+  controllers: [SubscriptionController],
+  providers: [SubscriptionService],
 })
 export class SubscriptionModule {}
