@@ -124,7 +124,7 @@ model Collector {
 }
 
 model Subscription {
-  id         Int      @id @default(autoincrement())
+  id         BigInt   @id @default(autoincrement())
   trackingId String   @unique @default(uuid())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

@@ -3,8 +3,11 @@ import { SubscriptionRepository } from './subscriptions.repository';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { SubscriptionResponseDto } from './dto/subscription-response.dto';
 import { CreateSubscriptionDataDto } from './dto/create-subscription-data.dto';
+import { SubscriptionEntity } from './entities/subscription.entity';
+import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
+import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
+import { PageDto } from '../../shared/pagination/dto/page.dto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -44,6 +47,8 @@ export class SubscriptionsService {
 
         const data: CreateSubscriptionDataDto = {
           ...dto,
+          startDate: new Date(dto.startDate),
+          nextBillingDate: new Date(dto.nextBillingDate),
           userId: user.id,
           offerId: offer.id,
         };
@@ -53,29 +58,19 @@ export class SubscriptionsService {
 
 
 
-    async findAll(page:number, limit:number){
+  async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<SubscriptionEntity>> {
+    const result = await this.subscriptionRepository.findAll(pageOptionsDto);
+    const itemCount = result.total;
+    const pageMetaDto = new PageMetaDto({
+      pageOptionsDto,
+      itemCount,
+    });
 
-    const result =
-        await this.subscriptionRepository.findAll(
-        page,
-        limit,
-        );
-
-
-    return {
-          data: result.data.map(subscription => this.toResponseDto(subscription),),
-        
-        meta:{
-        page,
-        limit,
-        total: result.total,
-        totalPages: Math.ceil(
-            result.total / limit
-        ),
-        },
-    };
-
-    }
+    return new PageDto(
+      result.data.map((subscription) => this.toResponseDto(subscription)),
+      pageMetaDto,
+    );
+  }
 
 
 
@@ -139,30 +134,19 @@ export class SubscriptionsService {
     }
 
 
-    private toResponseDto(subscription: any): SubscriptionResponseDto {
-  return {
-    trackingId: subscription.trackingId,
-    qrCodeId: subscription.qrCodeId,
-    addressText: subscription.addressText,
-    status: subscription.status,
-    startDate: subscription.startDate,
-    nextBillingDate: subscription.nextBillingDate,
-    createdAt: subscription.createdAt,
-    updatedAt: subscription.updatedAt,
-
-    user: {
-      trackingId: subscription.user.trackingId,
-      firstName: subscription.user.firstName,
-      lastName: subscription.user.lastName,
-      email: subscription.user.email,
-    },
-
-    offer: {
-      trackingId: subscription.offer.trackingId,
-      name: subscription.offer.name,
-      price: subscription.offer.price,
-      frequency: subscription.offer.frequency,
-    },
-  };
-}
+  private toResponseDto(subscription: any): SubscriptionEntity {
+    return new SubscriptionEntity({
+      id: subscription.id,
+      trackingId: subscription.trackingId,
+      qrCodeId: subscription.qrCodeId,
+      addressText: subscription.addressText,
+      status: subscription.status,
+      startDate: subscription.startDate,
+      nextBillingDate: subscription.nextBillingDate,
+      userId: subscription.userId,
+      offerId: subscription.offerId,
+      createdAt: subscription.createdAt,
+      updatedAt: subscription.updatedAt,
+    });
+  }
 }

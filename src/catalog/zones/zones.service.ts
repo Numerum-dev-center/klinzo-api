@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateZoneDto } from './dto/create-zone.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { ZoneEntity } from './entities/zone.entity';
 
 @Injectable()
 export class ZonesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createZoneDto: CreateZoneDto) {
+  async create(createZoneDto: CreateZoneDto): Promise<ZoneEntity> {
     const collector = await this.prisma.collector.findUnique({
       where: { trackingId: createZoneDto.collectorTrackingId },
     });
@@ -43,26 +44,26 @@ export class ZonesService {
       }
     }
 
-    return newZone;
+    return new ZoneEntity(newZone);
   }
 
-  async findAll() {
+  async findAll(): Promise<ZoneEntity[]> {
     const result = await this.prisma.$queryRaw`
       SELECT "trackingId", name, city, "isActive", "createdAt", "updatedAt", ST_AsGeoJSON("polygonPostgis")::json as geojson
       FROM "Zone"
       ORDER BY "createdAt" DESC;
     `;
-    return result;
+    return (result as any[]).map((zone) => new ZoneEntity(zone));
   }
 
-  async findOne(trackingId: string) {
+  async findOne(trackingId: string): Promise<ZoneEntity> {
     const result: any[] = await this.prisma.$queryRaw`
       SELECT "trackingId", name, city, "isActive", "createdAt", "updatedAt", ST_AsGeoJSON("polygonPostgis")::json as geojson
       FROM "Zone"
       WHERE "trackingId" = ${trackingId};
     `;
     if (!result || result.length === 0) throw new NotFoundException('Zone not found');
-    return result[0];
+    return new ZoneEntity(result[0]);
   }
 
   // Update and remove left simple for MVP PostGIS
@@ -91,7 +92,7 @@ export class ZonesService {
     return { message: `${collectors.length} collecteurs assignés avec succès à la zone` };
   }
 
-  async findZonesByCollector(collectorTrackingId: string) {
+  async findZonesByCollector(collectorTrackingId: string): Promise<ZoneEntity[]> {
     const collector = await this.prisma.collector.findUnique({ where: { trackingId: collectorTrackingId } });
     if (!collector) throw new NotFoundException('Collector not found');
 
@@ -103,6 +104,6 @@ export class ZonesService {
       WHERE cz."collectorId" = ${collector.id}
       ORDER BY z."createdAt" DESC;
     `;
-    return result;
+    return (result as any[]).map((zone) => new ZoneEntity(zone));
   }
 }

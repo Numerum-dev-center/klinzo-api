@@ -6,7 +6,6 @@ import {
   IsLongitude,
   IsEnum,
   IsDateString,
-  IsInt,
   IsNumber,
 } from 'class-validator';
 import { IsUUID } from 'class-validator';
@@ -33,17 +32,15 @@ export class CreateSubscriptionDto {
   status: SubscriptionStatus;
 
   @IsDateString()
-  startDate: Date;
+  startDate: string;
 
   @IsDateString()
-  nextBillingDate: Date;
+  nextBillingDate: string;
 
   @IsUUID()
-  @IsString()
   userTrackingId: string;
 
 
   @IsUUID()
-  @IsString()
   offerTrackingId: string;
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubscriptionDataDto } from './dto/create-subscription-data.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
 
 @Injectable()
 export class SubscriptionRepository {
@@ -69,16 +70,12 @@ export class SubscriptionRepository {
     }
   }
 
-  async findAll(
-    page: number,
-    limit: number,
-  ) {
-    const skip = (page - 1) * limit;
+  async findAll(pageOptionsDto: PageOptionsDto) {
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.subscription.findMany({
-        skip,
-        take: limit,
+        skip: pageOptionsDto.skip,
+        take: pageOptionsDto.size,
         include: {
           user: true,
           offer: true,

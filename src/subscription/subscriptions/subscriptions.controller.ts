@@ -12,13 +12,13 @@ import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { Query } from '@nestjs/common';
-import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
+import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
 
 @ApiTags('Subscriptions')
 @ApiBearerAuth()
@@ -50,15 +50,10 @@ export class SubscriptionsController {
       Role.GESTIONNAIRE_SAAS,
   )    
   findAll(
-    @Query() pagination: PaginationQueryDto,
-    ) {
-
-    return this.subscriptionsService.findAll(
-        pagination.page ?? 1,
-        pagination.limit ?? 10,
-    );
-
-    }
+    @Query() pageOptionsDto: PageOptionsDto,
+  ) {
+    return this.subscriptionsService.findAll(pageOptionsDto);
+  }
 
 
   @Get(':trackingId')

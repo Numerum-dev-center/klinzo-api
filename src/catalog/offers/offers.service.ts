@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { UpdateOfferDto } from './dto/update-offer.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { OfferResponse } from './dto/offer.response';
+import { OfferEntity } from './entities/offer.entity';
 import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
 import { PageDto } from '../../shared/pagination/dto/page.dto';
 import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
@@ -11,7 +11,7 @@ import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
 export class OffersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createOfferDto: CreateOfferDto): Promise<OfferResponse> {
+  async create(createOfferDto: CreateOfferDto): Promise<OfferEntity> {
     const collector = await this.prisma.collector.findUnique({
       where: { trackingId: createOfferDto.collectorTrackingId }
     });
@@ -32,10 +32,10 @@ export class OffersService {
       }
     });
 
-    return new OfferResponse(offer as any);
+    return new OfferEntity(offer as any);
   }
 
-  async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferResponse>> {
+  async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferEntity>> {
     const itemCount = await this.prisma.offer.count();
     const offers = await this.prisma.offer.findMany({
       skip: pageOptionsDto.skip,
@@ -44,11 +44,11 @@ export class OffersService {
     });
 
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-    const entities = offers.map(o => new OfferResponse(o as any));
+    const entities = offers.map(o => new OfferEntity(o as any));
     return new PageDto(entities, pageMetaDto);
   }
 
-  async findAllByZone(zoneTrackingId: string, pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferResponse>> {
+  async findAllByZone(zoneTrackingId: string, pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferEntity>> {
     const zone = await this.prisma.zone.findUnique({
       where: { trackingId: zoneTrackingId }
     });
@@ -64,11 +64,11 @@ export class OffersService {
     });
 
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-    const entities = offers.map(o => new OfferResponse(o as any));
+    const entities = offers.map(o => new OfferEntity(o as any));
     return new PageDto(entities, pageMetaDto);
   }
 
-  async findAllByCollector(collectorTrackingId: string, pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferResponse>> {
+  async findAllByCollector(collectorTrackingId: string, pageOptionsDto: PageOptionsDto): Promise<PageDto<OfferEntity>> {
     const collector = await this.prisma.collector.findUnique({
       where: { trackingId: collectorTrackingId }
     });
@@ -84,17 +84,17 @@ export class OffersService {
     });
 
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-    const entities = offers.map(o => new OfferResponse(o as any));
+    const entities = offers.map(o => new OfferEntity(o as any));
     return new PageDto(entities, pageMetaDto);
   }
 
-  async findOne(trackingId: string): Promise<OfferResponse> {
+  async findOne(trackingId: string): Promise<OfferEntity> {
     const offer = await this.prisma.offer.findUnique({ where: { trackingId } });
     if (!offer) throw new NotFoundException('Offer not found');
-    return new OfferResponse(offer as any);
+    return new OfferEntity(offer as any);
   }
 
-  async update(trackingId: string, updateOfferDto: UpdateOfferDto): Promise<OfferResponse> {
+  async update(trackingId: string, updateOfferDto: UpdateOfferDto): Promise<OfferEntity> {
     await this.findOne(trackingId); // check exists
     
     // Ignore updates to foreign keys in this basic version
@@ -104,7 +104,7 @@ export class OffersService {
       where: { trackingId },
       data
     });
-    return new OfferResponse(updated as any);
+    return new OfferEntity(updated as any);
   }
 
   async remove(trackingId: string): Promise<void> {
