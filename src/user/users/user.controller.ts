@@ -12,14 +12,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserByAdminDto } from './dto/create-user-admin.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserByAdminDto } from './dto/requests/create-user-admin.dto';
+import { UpdateUserDto } from './dto/requests/update-user.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()

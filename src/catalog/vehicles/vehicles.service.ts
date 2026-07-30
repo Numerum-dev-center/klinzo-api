@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { CreateVehicleDto } from './dto/create-vehicle.dto';
-import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CreateVehicleDto } from './dto/requests/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/requests/update-vehicle.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { VehicleResponse } from './dto/vehicle.response';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
-import { PageDto } from '../../shared/pagination/dto/page.dto';
-import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
+import { VehicleResponse } from './dto/responses/vehicle.response';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
+import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
 
 @Injectable()
 export class VehiclesService {

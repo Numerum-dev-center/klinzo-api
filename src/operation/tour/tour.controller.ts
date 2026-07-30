@@ -1,34 +1,77 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TourService } from './tour.service';
-import { CreateTourDto } from './dto/request/create-tour.dto';
-import { UpdateTourDto } from './dto/request/update-tour.dto';
+import { CreateTourDto } from './dto/requests/create-tour.dto';
+import { OptimizeRouteDto } from './dto/requests/optimize-route.dto';
+import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+import { RolesGuard } from '../../shared/security/roles.guard';
+import { Roles } from '../../shared/security/roles.decorator';
+import { Role } from '@prisma/client';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 
-@Controller('tour')
+@ApiTags('Tours')
+@ApiBearerAuth()
+@UseInterceptors(ClassSerializerInterceptor)
+@Controller('tours')
 export class TourController {
   constructor(private readonly tourService: TourService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
   create(@Body() createTourDto: CreateTourDto) {
     return this.tourService.create(createTourDto);
   }
 
   @Get()
-  findAll() {
-    return this.tourService.findAll();
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
+  findAll(@Query() pageOptionsDto: PageOptionsDto) {
+    return this.tourService.findAll(pageOptionsDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tourService.findOne(+id);
+  @Get('vehicle/:vehicleTrackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR)
+  findAllByVehicle(
+    @Param('vehicleTrackingId') vehicleTrackingId: string,
+    @Query() pageOptionsDto: PageOptionsDto
+  ) {
+    return this.tourService.findAllByVehicle(vehicleTrackingId, pageOptionsDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTourDto: UpdateTourDto) {
-    return this.tourService.update(+id, updateTourDto);
+  @Get(':trackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR)
+  findOne(@Param('trackingId') trackingId: string) {
+    return this.tourService.findOne(trackingId);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tourService.remove(+id);
+  @Patch(':trackingId/start')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.AGENT_COLLECTEUR, Role.ADMIN_COLLECTEUR)
+  start(@Param('trackingId') trackingId: string) {
+    return this.tourService.start(trackingId);
+  }
+
+  @Patch(':trackingId/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.AGENT_COLLECTEUR, Role.ADMIN_COLLECTEUR)
+  complete(@Param('trackingId') trackingId: string) {
+    return this.tourService.complete(trackingId);
+  }
+
+  @Patch(':trackingId/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
+  cancel(@Param('trackingId') trackingId: string) {
+    return this.tourService.cancel(trackingId);
+  }
+
+  @Post('optimize-route')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
+  optimizeRoute(@Body() dto: OptimizeRouteDto) {
+    return this.tourService.optimizeRoute(dto);
   }
 }

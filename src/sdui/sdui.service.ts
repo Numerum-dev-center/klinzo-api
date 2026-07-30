@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateSduiDto } from './dto/create-sdui.dto';
-import { UpdateSduiDto } from './dto/update-sdui.dto';
+import { CreateSduiDto } from './dto/requests/create-sdui.dto';
+import { UpdateSduiDto } from './dto/requests/update-sdui.dto';
 
 @Injectable()
 export class SduiService {

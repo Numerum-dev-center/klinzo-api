@@ -32,6 +32,7 @@ model User {
   collectorId        BigInt?
   collector          Collector?     @relation(fields: [collectorId], references: [id])
   subscriptions      Subscription[]
+  ratings            Rating[]
 }
 
 enum KycStatus {
@@ -60,6 +61,7 @@ model Vehicle {
   isActive     Boolean   @default(true)
   collectorId  BigInt
   collector    Collector @relation(fields: [collectorId], references: [id])
+  tours        Tour[]
 }
 
 model Zone {
@@ -121,6 +123,8 @@ model Collector {
   vehicles           Vehicle[]
   collectorZones     CollectorZone[]
   offers             Offer[]
+  ratings            Rating[]
+  financialDocuments FinancialDocument[]
 }
 
 model Subscription {
@@ -144,6 +148,8 @@ model Subscription {
 
   user  User  @relation(fields: [userId], references: [id])
   offer Offer @relation(fields: [offerId], references: [id])
+  collectionEvents CollectionEvent[]
+  transactions     Transaction[]
 }
 
 enum SubscriptionStatus {
@@ -151,4 +157,117 @@ enum SubscriptionStatus {
   PAUSED
   CANCELLED
   PENDING_PAYMENT
+}
+
+enum TourStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Tour {
+  id              BigInt     @id @default(autoincrement())
+  trackingId      String     @unique @default(uuid())
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  reference       String     @unique
+  scheduledDate   DateTime
+  actualStartTime DateTime?
+  actualEndTime   DateTime?
+  status          TourStatus @default(PLANNED)
+  vehicleId       BigInt
+  vehicle         Vehicle    @relation(fields: [vehicleId], references: [id])
+  collectionEvents CollectionEvent[]
+}
+
+enum CollectionStatus {
+  PENDING
+  VALIDATED
+  DISPUTED
+  CANCELLED
+}
+
+model CollectionEvent {
+  id                     BigInt           @id @default(autoincrement())
+  trackingId             String           @unique @default(uuid())
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  status                 CollectionStatus @default(PENDING)
+  executedAt             DateTime?
+  gpsProof               Unsupported("geography(Point,4326)")?
+  photoUrl               String?
+  qrScanData             String?
+  autoValidationDeadline DateTime?
+  disputeReason          String?
+  tourId                 BigInt
+  tour                   Tour             @relation(fields: [tourId], references: [id])
+  subscriptionId         BigInt
+  subscription           Subscription     @relation(fields: [subscriptionId], references: [id])
+  rating                 Rating?
+}
+
+model Rating {
+  id                BigInt          @id @default(autoincrement())
+  trackingId        String          @unique @default(uuid())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  score             Int
+  comment           String?
+  collectorId       BigInt
+  collector         Collector       @relation(fields: [collectorId], references: [id])
+  userId            BigInt
+  user              User            @relation(fields: [userId], references: [id])
+  collectionEventId BigInt          @unique
+  collectionEvent   CollectionEvent @relation(fields: [collectionEventId], references: [id])
+}
+
+model Transaction {
+  id                  BigInt             @id @default(autoincrement())
+  trackingId          String             @unique @default(uuid())
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  amount              Float
+  platformCommission  Float
+  paymentGatewayRef   String?
+  status              String
+  invoicePdfUrl       String?
+  timestamp           DateTime           @default(now())
+  subscriptionId      BigInt
+  subscription        Subscription       @relation(fields: [subscriptionId], references: [id])
+  financialDocumentId BigInt?
+  financialDocument   FinancialDocument? @relation(fields: [financialDocumentId], references: [id])
+}
+
+enum FinancialDocumentType {
+  PAYOUT
+  COLLECTOR_SUBSCRIPTION
+}
+
+enum FinancialDocumentStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  FAILED
+  CANCELLED
+}
+
+model FinancialDocument {
+  id           BigInt                  @id @default(autoincrement())
+  trackingId   String                  @unique @default(uuid())
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  type         FinancialDocumentType
+  status       FinancialDocumentStatus @default(PENDING)
+  collectorId  BigInt
+  collector    Collector               @relation(fields: [collectorId], references: [id])
+  periodStart  DateTime
+  periodEnd    DateTime
+  amount       Float
+  documentUrl  String?
+  dueDate      DateTime?
+  settledAt    DateTime?
+  metadata     Json
+  transactions Transaction[]
 }

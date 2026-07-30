@@ -1,16 +1,16 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { CreateCollectorDto } from './dto/request/create-collector.dto';
-import { UpdateCollectorDto } from './dto/request/update-collector.dto';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { CreateCollectorDto } from './dto/requests/create-collector.dto';
+import { UpdateCollectorDto } from './dto/requests/update-collector.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { CollectorResponse } from './dto/response/collector.response';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
-import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
-import { PageDto } from '../../shared/pagination/dto/page.dto';
+import { CollectorResponse } from './dto/responses/collector.response';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
+import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
 import { CollectorType } from './entities/enums/collector-type.enum';
 import { KycStatus } from './entities/enums/kyc-status.enum';
-import { SearchCollectorDto } from './dto/request/search-collector.dto';
-import { KycStatusFilterDto } from './dto/request/kyc-status-filter.dto';
-import { TypeFilterDto } from './dto/request/type-filter.dto';
+import { SearchCollectorDto } from './dto/requests/search-collector.dto';
+import { KycStatusFilterDto } from './dto/requests/kyc-status-filter.dto';
+import { TypeFilterDto } from './dto/requests/type-filter.dto';
 
 @Injectable()
 export class CollectorsService {
@@ -66,6 +66,33 @@ export class CollectorsService {
         kycStatus: KycStatus.SUSPENDED
       }
     });
+  }
+
+  async suspend(trackingId: string): Promise<CollectorResponse> {
+    const collector = await this.prisma.collector.findUnique({ where: { trackingId }});
+    if (!collector) throw new NotFoundException('Collector not found');
+    if (!collector.isActive) {
+      throw new BadRequestException('Collector is already inactive');
+    }
+    // TODO: Un motif de suspension et un audit log devraient être persistés dans une future entité AuditLog (hors scope MVP)
+    const updated = await this.prisma.collector.update({
+      where: { trackingId },
+      data: { isActive: false }
+    });
+    return new CollectorResponse(updated as any);
+  }
+
+  async reactivate(trackingId: string): Promise<CollectorResponse> {
+    const collector = await this.prisma.collector.findUnique({ where: { trackingId }});
+    if (!collector) throw new NotFoundException('Collector not found');
+    if (collector.isActive) {
+      throw new BadRequestException('Collector is already active');
+    }
+    const updated = await this.prisma.collector.update({
+      where: { trackingId },
+      data: { isActive: true }
+    });
+    return new CollectorResponse(updated as any);
   }
 
   async getActiveCollectors(pageOptionsDto: PageOptionsDto): Promise<PageDto<CollectorResponse>> {

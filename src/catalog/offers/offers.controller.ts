@@ -1,13 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { OffersService } from './offers.service';
-import { CreateOfferDto } from './dto/create-offer.dto';
-import { UpdateOfferDto } from './dto/update-offer.dto';
+import { CreateOfferDto } from './dto/requests/create-offer.dto';
+import { UpdateOfferDto } from './dto/requests/update-offer.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 
 @ApiTags('Offers')
 @ApiBearerAuth()
@@ -69,5 +69,19 @@ export class OffersController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   remove(@Param('trackingId') trackingId: string) {
     return this.offersService.remove(trackingId);
+  }
+
+  @Patch(':trackingId/activate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  activate(@Param('trackingId') trackingId: string) {
+    return this.offersService.activate(trackingId);
+  }
+
+  @Patch(':trackingId/deactivate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  deactivate(@Param('trackingId') trackingId: string) {
+    return this.offersService.deactivate(trackingId);
   }
 }

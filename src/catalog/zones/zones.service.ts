@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateZoneDto } from './dto/create-zone.dto';
+import { CreateZoneDto } from './dto/requests/create-zone.dto';
+import { UpdateZoneDto } from './dto/requests/update-zone.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { ZoneEntity } from './entities/zone.entity';
 
@@ -66,7 +67,44 @@ export class ZonesService {
     return new ZoneEntity(result[0]);
   }
 
-  // Update and remove left simple for MVP PostGIS
+  async update(trackingId: string, dto: UpdateZoneDto): Promise<ZoneEntity> {
+    await this.findOne(trackingId); // verifies existence or throws NotFoundException
+
+    if (dto.geojson) {
+      const geojsonStr = JSON.stringify(dto.geojson);
+      // Raw SQL update to handle PostGIS geometry
+      await this.prisma.$executeRaw`
+        UPDATE "Zone"
+        SET 
+          name = COALESCE(${dto.name ?? null}, name),
+          city = COALESCE(${dto.city ?? null}, city),
+          "isActive" = COALESCE(${dto.isActive ?? null}, "isActive"),
+          "polygonPostgis" = ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326),
+          "updatedAt" = NOW()
+        WHERE "trackingId" = ${trackingId};
+      `;
+    } else {
+      await this.prisma.zone.update({
+        where: { trackingId },
+        data: {
+          name: dto.name,
+          city: dto.city,
+          isActive: dto.isActive
+        }
+      });
+    }
+
+    return this.findOne(trackingId);
+  }
+
+  async remove(trackingId: string): Promise<ZoneEntity> {
+    await this.findOne(trackingId);
+    await this.prisma.zone.update({
+      where: { trackingId },
+      data: { isActive: false }
+    });
+    return this.findOne(trackingId);
+  }
 
   async assignCollectors(zoneTrackingId: string, collectorTrackingIds: string[]) {
     const zone = await this.prisma.zone.findUnique({ where: { trackingId: zoneTrackingId } });
