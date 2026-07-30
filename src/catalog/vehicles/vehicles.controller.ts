@@ -1,13 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { VehiclesService } from './vehicles.service';
-import { CreateVehicleDto } from './dto/create-vehicle.dto';
-import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CreateVehicleDto } from './dto/requests/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/requests/update-vehicle.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 
 @ApiTags('Vehicles')
 @ApiBearerAuth()

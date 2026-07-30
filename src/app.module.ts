@@ -5,7 +5,7 @@ import { UserModule } from './user/users/user.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { OperationModule } from './operation/operation.module';
-import { BillingModule } from './billing/billing.module';
+import { FinancialDocumentsModule } from './finance/financial-documents/financial-documents.module';
 import { SduiModule } from './sdui/sdui.module';
 
 @Module({
@@ -16,7 +16,7 @@ import { SduiModule } from './sdui/sdui.module';
     CatalogModule,
     SubscriptionModule,
     OperationModule,
-    BillingModule,
+    FinancialDocumentsModule,
     SduiModule,
   ],
   controllers: [], // Vide, car on a supprimé app.controller.ts

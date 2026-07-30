@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateOfferDto } from './dto/create-offer.dto';
-import { UpdateOfferDto } from './dto/update-offer.dto';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { CreateOfferDto } from './dto/requests/create-offer.dto';
+import { UpdateOfferDto } from './dto/requests/update-offer.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { OfferEntity } from './entities/offer.entity';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
-import { PageDto } from '../../shared/pagination/dto/page.dto';
-import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
+import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
 
 @Injectable()
 export class OffersService {
@@ -114,5 +114,43 @@ export class OffersService {
       where: { trackingId },
       data: { isActive: false }
     });
+  }
+
+  async activate(trackingId: string): Promise<OfferEntity> {
+    const offerDb = await this.prisma.offer.findUnique({ where: { trackingId } });
+    if (!offerDb) throw new NotFoundException('Offer not found');
+    if (offerDb.isActive) {
+      throw new BadRequestException('Offer is already active');
+    }
+    const updated = await this.prisma.offer.update({
+      where: { trackingId },
+      data: { isActive: true }
+    });
+    return new OfferEntity(updated as any);
+  }
+
+  async deactivate(trackingId: string): Promise<OfferEntity> {
+    const offerDb = await this.prisma.offer.findUnique({ where: { trackingId } });
+    if (!offerDb) throw new NotFoundException('Offer not found');
+    if (!offerDb.isActive) {
+      throw new BadRequestException('Offer is already inactive');
+    }
+
+    const activeSubscriptionsCount = await this.prisma.subscription.count({
+      where: {
+        offerId: offerDb.id,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (activeSubscriptionsCount > 0) {
+      throw new ConflictException(`Cannot deactivate an offer with ${activeSubscriptionsCount} active subscription(s). Reassign or cancel them first.`);
+    }
+
+    const updated = await this.prisma.offer.update({
+      where: { trackingId },
+      data: { isActive: false }
+    });
+    return new OfferEntity(updated as any);
   }
 }

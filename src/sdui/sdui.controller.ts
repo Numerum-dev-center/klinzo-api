@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { SduiService } from './sdui.service';
-import { CreateSduiDto } from './dto/create-sdui.dto';
-import { UpdateSduiDto } from './dto/update-sdui.dto';
+import { CreateSduiDto } from './dto/requests/create-sdui.dto';
+import { UpdateSduiDto } from './dto/requests/update-sdui.dto';
 
 @Controller('sdui')
 export class SduiController {

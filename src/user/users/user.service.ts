@@ -5,14 +5,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from './dto/requests/create-user.dto';
+import { UpdateUserDto } from './dto/requests/update-user.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { UserEntity } from './entities/user.entity';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
-import { PageMetaDto } from '../../shared/pagination/dto/page-meta.dto';
-import { PageDto } from '../../shared/pagination/dto/page.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
+import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
 
 @Injectable()
 export class UserService {

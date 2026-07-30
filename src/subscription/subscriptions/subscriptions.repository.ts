@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { CreateSubscriptionDataDto } from './dto/create-subscription-data.dto';
-import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
+import { CreateSubscriptionDataDto } from './dto/requests/create-subscription-data.dto';
+import { UpdateSubscriptionDto } from './dto/requests/update-subscription.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 
 @Injectable()
 export class SubscriptionRepository {

@@ -1,16 +1,16 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, ClassSerializerInterceptor, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CollectorsService } from './collectors.service';
-import { CreateCollectorDto } from './dto/request/create-collector.dto';
-import { UpdateCollectorDto } from './dto/request/update-collector.dto';
+import { CreateCollectorDto } from './dto/requests/create-collector.dto';
+import { UpdateCollectorDto } from './dto/requests/update-collector.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
-import { PageOptionsDto } from '../../shared/pagination/dto/page-options.dto';
-import { SearchCollectorDto } from './dto/request/search-collector.dto';
-import { KycStatusFilterDto } from './dto/request/kyc-status-filter.dto';
-import { TypeFilterDto } from './dto/request/type-filter.dto';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { SearchCollectorDto } from './dto/requests/search-collector.dto';
+import { KycStatusFilterDto } from './dto/requests/kyc-status-filter.dto';
+import { TypeFilterDto } from './dto/requests/type-filter.dto';
 
 @ApiTags('Collectors')
 @ApiBearerAuth()
@@ -80,5 +80,19 @@ export class CollectorsController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   remove(@Param('trackingId') trackingId: string) {
     return this.collectorsService.remove(trackingId);
+  }
+
+  @Patch(':trackingId/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  suspend(@Param('trackingId') trackingId: string) {
+    return this.collectorsService.suspend(trackingId);
+  }
+
+  @Patch(':trackingId/reactivate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  reactivate(@Param('trackingId') trackingId: string) {
+    return this.collectorsService.reactivate(trackingId);
   }
 }
