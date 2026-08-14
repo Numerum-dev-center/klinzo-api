@@ -109,7 +109,7 @@ export class CollectionEventService {
     return new CollectionEventResponse(event as any);
   }
 
-  async validate(trackingId: string, requestingUserId: bigint): Promise<CollectionEventResponse> {
+  async validate(trackingId: string, requestingUserTrackingId: string): Promise<CollectionEventResponse> {
     const event = await this.prisma.collectionEvent.findUnique({
       where: { trackingId },
       include: {
@@ -120,9 +120,9 @@ export class CollectionEventService {
     });
 
     if (!event) throw new NotFoundException('CollectionEvent not found');
-    
+
     // Authorization check
-    if (event.subscription.user.id !== requestingUserId) {
+    if (event.subscription.user.trackingId !== requestingUserTrackingId) {
       throw new ForbiddenException('You do not have permission to validate this event');
     }
 
@@ -138,7 +138,7 @@ export class CollectionEventService {
     return new CollectionEventResponse(updated as any);
   }
 
-  async dispute(trackingId: string, requestingUserId: bigint, dto: DisputeCollectionEventDto): Promise<CollectionEventResponse> {
+  async dispute(trackingId: string, requestingUserTrackingId: string, dto: DisputeCollectionEventDto): Promise<CollectionEventResponse> {
     const event = await this.prisma.collectionEvent.findUnique({
       where: { trackingId },
       include: {
@@ -149,9 +149,9 @@ export class CollectionEventService {
     });
 
     if (!event) throw new NotFoundException('CollectionEvent not found');
-    
+
     // Authorization check
-    if (event.subscription.user.id !== requestingUserId) {
+    if (event.subscription.user.trackingId !== requestingUserTrackingId) {
       throw new ForbiddenException('You do not have permission to dispute this event');
     }
 
