@@ -24,14 +24,14 @@ export class ZonesController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAll() {
     return this.zonesService.findAll();
   }
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findOne(@Param('trackingId') trackingId: string) {
     return this.zonesService.findOne(trackingId);
   }
@@ -65,7 +65,7 @@ export class ZonesController {
 
   @Get('collector/:collectorTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findByCollector(@Param('collectorTrackingId') collectorTrackingId: string) {
     return this.zonesService.findZonesByCollector(collectorTrackingId);
   }

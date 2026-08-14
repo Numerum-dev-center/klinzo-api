@@ -25,14 +25,14 @@ export class VehiclesController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAll(@Query() pageOptionsDto: PageOptionsDto) {
     return this.vehiclesService.findAll(pageOptionsDto);
   }
 
   @Get('collector/:collectorTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAllByCollector(
     @Param('collectorTrackingId') collectorTrackingId: string,
     @Query() pageOptionsDto: PageOptionsDto
@@ -42,7 +42,7 @@ export class VehiclesController {
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findOne(@Param('trackingId') trackingId: string) {
     return this.vehiclesService.findOne(trackingId);
   }

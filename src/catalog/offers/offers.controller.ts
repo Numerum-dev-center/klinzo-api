@@ -25,14 +25,14 @@ export class OffersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAll(@Query() pageOptionsDto: PageOptionsDto) {
     return this.offersService.findAll(pageOptionsDto);
   }
 
   @Get('zone/:zoneTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAllByZone(
     @Param('zoneTrackingId') zoneTrackingId: string,
     @Query() pageOptionsDto: PageOptionsDto
@@ -42,7 +42,7 @@ export class OffersController {
 
   @Get('collector/:collectorTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findAllByCollector(
     @Param('collectorTrackingId') collectorTrackingId: string,
     @Query() pageOptionsDto: PageOptionsDto
@@ -52,7 +52,7 @@ export class OffersController {
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   findOne(@Param('trackingId') trackingId: string) {
     return this.offersService.findOne(trackingId);
   }
