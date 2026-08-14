@@ -56,6 +56,21 @@ export class SubscriptionsController {
   }
 
 
+  @Get('collector/:collectorTrackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+  )
+  findAllByCollector(
+    @Param('collectorTrackingId') collectorTrackingId: string,
+    @Query() pageOptionsDto: PageOptionsDto,
+  ) {
+    return this.subscriptionsService.findAllByCollector(collectorTrackingId, pageOptionsDto);
+  }
+
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard)
   findOne(

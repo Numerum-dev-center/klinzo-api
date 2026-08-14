@@ -51,7 +51,7 @@ export class FinancialDocumentsService {
 
     if (!collector) throw new NotFoundException('Collector not found');
 
-    if (requestingUser.role === Role.ADMIN_COLLECTEUR) {
+    if (requestingUser.role === Role.ADMIN_COLLECTEUR || requestingUser.role === Role.AGENT_COLLECTEUR) {
       const user = await this.prisma.user.findUnique({
         where: { trackingId: requestingUser.trackingId }
       });
@@ -98,7 +98,7 @@ export class FinancialDocumentsService {
 
     if (!document) throw new NotFoundException('Financial document not found');
 
-    if (requestingUser.role === Role.ADMIN_COLLECTEUR) {
+    if (requestingUser.role === Role.ADMIN_COLLECTEUR || requestingUser.role === Role.AGENT_COLLECTEUR) {
       const user = await this.prisma.user.findUnique({
         where: { trackingId: requestingUser.trackingId }
       });

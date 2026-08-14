@@ -74,6 +74,24 @@ export class SubscriptionsService {
     );
   }
 
+  async findAllByCollector(
+    collectorTrackingId: string,
+    pageOptionsDto: PageOptionsDto,
+  ): Promise<PageDto<SubscriptionEntity>> {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId: collectorTrackingId },
+    });
+    if (!collector) throw new NotFoundException('Collector not found');
+
+    const result = await this.subscriptionRepository.findAllByCollector(collector.id, pageOptionsDto);
+    const pageMetaDto = new PageMetaDto({ pageOptionsDto, itemCount: result.total });
+
+    return new PageDto(
+      result.data.map((subscription) => this.toResponseDto(subscription, true)),
+      pageMetaDto,
+    );
+  }
+
 
 
     async findOne(trackingId: string) {
@@ -173,7 +191,7 @@ export class SubscriptionsService {
   }
 
 
-  private toResponseDto(subscription: any): SubscriptionEntity {
+  private toResponseDto(subscription: any, withRelations = false): SubscriptionEntity {
     return new SubscriptionEntity({
       id: subscription.id,
       trackingId: subscription.trackingId,
@@ -186,6 +204,26 @@ export class SubscriptionsService {
       offerId: subscription.offerId,
       createdAt: subscription.createdAt,
       updatedAt: subscription.updatedAt,
+      user:
+        withRelations && subscription.user
+          ? {
+              trackingId: subscription.user.trackingId,
+              firstName: subscription.user.firstName,
+              lastName: subscription.user.lastName,
+              email: subscription.user.email,
+              phone: subscription.user.phone,
+            }
+          : undefined,
+      offer:
+        withRelations && subscription.offer
+          ? {
+              trackingId: subscription.offer.trackingId,
+              name: subscription.offer.name,
+              price: subscription.offer.price,
+              frequency: subscription.offer.frequency,
+              wasteType: subscription.offer.wasteType,
+            }
+          : undefined,
     });
   }
 }

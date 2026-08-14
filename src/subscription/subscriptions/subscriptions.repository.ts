@@ -93,6 +93,31 @@ export class SubscriptionRepository {
     };
   }
 
+  async findAllByCollector(collectorId: bigint, pageOptionsDto: PageOptionsDto) {
+    const where = { offer: { collectorId } };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.subscription.findMany({
+        where,
+        skip: pageOptionsDto.skip,
+        take: pageOptionsDto.size,
+        include: {
+          user: true,
+          offer: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.subscription.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+    };
+  }
+
   async findOne(trackingId: string) {
     return this.prisma.subscription.findUnique({
       where: {

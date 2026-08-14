@@ -49,7 +49,7 @@ export class FinancialDocumentsController {
 
   @Get('collector/:collectorTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR)
   findAllByCollector(
     @Param('collectorTrackingId') collectorTrackingId: string,
     @Query() pageOptionsDto: PageOptionsDto,
