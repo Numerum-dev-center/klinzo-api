@@ -116,6 +116,7 @@ export class UserService {
   async findOne(trackingId: string): Promise<UserEntity> {
     const user = await this.prisma.user.findUnique({
       where: { trackingId },
+      include: { collector: { select: { trackingId: true } } },
     });
 
     if (!user) {
@@ -124,7 +125,8 @@ export class UserService {
       );
     }
 
-    return new UserEntity(user);
+    const { collector, ...userData } = user;
+    return new UserEntity({ ...userData, collectorTrackingId: collector?.trackingId });
   }
 
   async update(

@@ -20,6 +20,13 @@ export class UserEntity {
   createdAt: Date;
   updatedAt: Date;
 
+  @Exclude()
+  collectorId: bigint | null;
+
+  // Résolu depuis la relation collector — permet au frontend de scoper ses appels
+  // (ex: GET /offers/collector/:collectorTrackingId) sans exposer l'id interne.
+  collectorTrackingId?: string;
+
   constructor(partial: Partial<UserEntity>) {
     Object.assign(this, partial);
   }
