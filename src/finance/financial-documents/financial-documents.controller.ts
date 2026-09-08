@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards, Req, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+  ClassSerializerInterceptor,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { FinancialDocumentsService } from './financial-documents.service';
 import { PayoutCalculationService } from '../payout-calculation.service';
@@ -10,6 +21,8 @@ import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role, FinancialDocumentType } from '@prisma/client';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { CurrentUser } from '../../shared/security/current-user.decorator';
+import type { RequestingUser } from '../../shared/security/requesting-user';
 
 @ApiTags('Financial Documents')
 @ApiBearerAuth()
@@ -32,7 +45,9 @@ export class FinancialDocumentsController {
   @Post('collector-subscriptions/generate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  generateCollectorSubscriptionInvoice(@Body() dto: GenerateCollectorSubscriptionInvoiceDto) {
+  generateCollectorSubscriptionInvoice(
+    @Body() dto: GenerateCollectorSubscriptionInvoiceDto,
+  ) {
     return this.collectorBillingService.generateSubscriptionInvoice(dto);
   }
 
@@ -42,36 +57,42 @@ export class FinancialDocumentsController {
   @ApiQuery({ name: 'type', enum: FinancialDocumentType, required: false })
   findAll(
     @Query() pageOptionsDto: PageOptionsDto,
-    @Query('type') type?: FinancialDocumentType
+    @Query('type') type?: FinancialDocumentType,
   ) {
     return this.financialDocumentsService.findAll(pageOptionsDto, type);
   }
 
   @Get('collector/:collectorTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+  )
   findAllByCollector(
     @Param('collectorTrackingId') collectorTrackingId: string,
     @Query() pageOptionsDto: PageOptionsDto,
-    @Req() req: any
+    @CurrentUser() user: RequestingUser,
   ) {
-    // using req.user.trackingId instead of req.user.id
     return this.financialDocumentsService.findAllByCollector(
-      collectorTrackingId, 
-      pageOptionsDto, 
-      { trackingId: req.user.trackingId, role: req.user.role }
+      collectorTrackingId,
+      pageOptionsDto,
+      { trackingId: user.trackingId, role: user.role },
     );
   }
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR)
-  findOne(@Param('trackingId') trackingId: string, @Req() req: any) {
-    // using req.user.trackingId instead of req.user.id
-    return this.financialDocumentsService.findOne(
-      trackingId, 
-      { trackingId: req.user.trackingId, role: req.user.role }
-    );
+  findOne(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.financialDocumentsService.findOne(trackingId, {
+      trackingId: user.trackingId,
+      role: user.role,
+    });
   }
 
   @Patch(':trackingId/mark-paid')

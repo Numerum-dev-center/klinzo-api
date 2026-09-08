@@ -5,14 +5,8 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { SubscriptionRepository } from './subscriptions.repository';
 
 @Module({
-  controllers: [
-    SubscriptionsController
-  ],
+  controllers: [SubscriptionsController],
 
-  providers: [
-    PrismaService,
-    SubscriptionsService,
-    SubscriptionRepository,
-  ]
+  providers: [PrismaService, SubscriptionsService, SubscriptionRepository],
 })
 export class SubscriptionsModule {}

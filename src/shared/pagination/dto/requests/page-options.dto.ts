@@ -14,7 +14,22 @@ export class PageOptionsDto {
   @IsOptional()
   readonly size?: number = 10;
 
+  get pageNumber(): number {
+    return this.toPositiveInteger(this.page, 1);
+  }
+
+  get take(): number {
+    return this.toPositiveInteger(this.size, 10);
+  }
+
   get skip(): number {
-    return (this.page! - 1) * this.size!;
+    return (this.pageNumber - 1) * this.take;
+  }
+
+  private toPositiveInteger(value: unknown, fallback: number): number {
+    const numberValue = Number(value ?? fallback);
+    return Number.isInteger(numberValue) && numberValue > 0
+      ? numberValue
+      : fallback;
   }
 }

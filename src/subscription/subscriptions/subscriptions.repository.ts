@@ -6,19 +6,12 @@ import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-option
 
 @Injectable()
 export class SubscriptionRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createSubscriptionDto: CreateSubscriptionDataDto) {
-    const {
-      latitude,
-      longitude,
-      ...subscriptionData
-    } = createSubscriptionDto;
+    const { latitude, longitude, ...subscriptionData } = createSubscriptionDto;
 
-    try {
-      const result = await this.prisma.$queryRaw<any[]>`
+    const result = await this.prisma.$queryRaw<any[]>`
         INSERT INTO "Subscription"
         (
           "qrCodeId",
@@ -64,18 +57,14 @@ export class SubscriptionRepository {
         RETURNING *
       `;
 
-      return result[0];
-    } catch (error) {
-      throw error;
-    }
+    return result[0];
   }
 
   async findAll(pageOptionsDto: PageOptionsDto) {
-
     const [data, total] = await this.prisma.$transaction([
       this.prisma.subscription.findMany({
         skip: pageOptionsDto.skip,
-        take: pageOptionsDto.size,
+        take: pageOptionsDto.take,
         include: {
           user: true,
           offer: true,
@@ -93,14 +82,17 @@ export class SubscriptionRepository {
     };
   }
 
-  async findAllByCollector(collectorId: bigint, pageOptionsDto: PageOptionsDto) {
+  async findAllByCollector(
+    collectorId: bigint,
+    pageOptionsDto: PageOptionsDto,
+  ) {
     const where = { offer: { collectorId } };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.subscription.findMany({
         where,
         skip: pageOptionsDto.skip,
-        take: pageOptionsDto.size,
+        take: pageOptionsDto.take,
         include: {
           user: true,
           offer: true,
@@ -118,7 +110,7 @@ export class SubscriptionRepository {
     };
   }
 
-  async findOne(trackingId: string) {
+  findOne(trackingId: string) {
     return this.prisma.subscription.findUnique({
       where: {
         trackingId,
@@ -130,10 +122,7 @@ export class SubscriptionRepository {
     });
   }
 
-  async update(
-    trackingId: string,
-    data: UpdateSubscriptionDto,
-  ) {
+  update(trackingId: string, data: UpdateSubscriptionDto) {
     return this.prisma.subscription.update({
       where: {
         trackingId,
@@ -142,7 +131,7 @@ export class SubscriptionRepository {
     });
   }
 
-  async remove(trackingId: string) {
+  remove(trackingId: string) {
     return this.prisma.subscription.delete({
       where: {
         trackingId,

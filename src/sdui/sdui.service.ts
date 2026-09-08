@@ -4,7 +4,7 @@ import { UpdateSduiDto } from './dto/requests/update-sdui.dto';
 
 @Injectable()
 export class SduiService {
-  create(createSduiDto: CreateSduiDto) {
+  create(_createSduiDto: CreateSduiDto) {
     return 'This action adds a new sdui';
   }
 
@@ -16,7 +16,7 @@ export class SduiService {
     return `This action returns a #${id} sdui`;
   }
 
-  update(id: number, updateSduiDto: UpdateSduiDto) {
+  update(id: number, _updateSduiDto: UpdateSduiDto) {
     return `This action updates a #${id} sdui`;
   }
 

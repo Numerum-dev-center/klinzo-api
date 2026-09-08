@@ -6,7 +6,12 @@ import { CatalogModule } from './catalog/catalog.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { OperationModule } from './operation/operation.module';
 import { FinancialDocumentsModule } from './finance/financial-documents/financial-documents.module';
-import { SduiModule } from './sdui/sdui.module';
+import { YeriaModule } from './yeria/yeria.module';
+import { HealthController } from './health/health.controller';
+import { PlatformSettingsController } from './platform-settings/platform-settings.controller';
+import { ReportingModule } from './reporting/reporting.module';
+import { CommunicationModule } from './communication/communication.module';
+import { ReconciliationModule } from './finance/reconciliation/reconciliation.module';
 
 @Module({
   imports: [
@@ -17,9 +22,12 @@ import { SduiModule } from './sdui/sdui.module';
     SubscriptionModule,
     OperationModule,
     FinancialDocumentsModule,
-    SduiModule,
+    YeriaModule,
+    ReportingModule,
+    CommunicationModule,
+    ReconciliationModule,
   ],
-  controllers: [], // Vide, car on a supprimé app.controller.ts
+  controllers: [HealthController, PlatformSettingsController],
   providers: [], // Vide, car on a supprimé app.service.ts
 })
 export class AppModule {}

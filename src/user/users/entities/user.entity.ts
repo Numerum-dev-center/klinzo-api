@@ -15,6 +15,9 @@ export class UserEntity {
   @Exclude()
   password: string;
 
+  @Exclude()
+  hashedRefreshToken?: string | null;
+
   role: Role;
   isActive: boolean;
   createdAt: Date;
@@ -28,6 +31,16 @@ export class UserEntity {
   collectorTrackingId?: string;
 
   constructor(partial: Partial<UserEntity>) {
-    Object.assign(this, partial);
+    this.trackingId = partial.trackingId!;
+    this.firstName = partial.firstName!;
+    this.lastName = partial.lastName!;
+    this.email = partial.email!;
+    this.emailVerified = partial.emailVerified!;
+    this.phone = partial.phone!;
+    this.role = partial.role!;
+    this.isActive = partial.isActive!;
+    this.createdAt = partial.createdAt!;
+    this.updatedAt = partial.updatedAt!;
+    this.collectorTrackingId = partial.collectorTrackingId;
   }
 }

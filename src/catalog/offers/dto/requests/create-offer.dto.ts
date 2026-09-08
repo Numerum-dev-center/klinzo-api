@@ -1,8 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateOfferDto {
-  @ApiProperty({ description: 'Nom de l\'offre' })
+  @ApiProperty({ description: "Nom de l'offre" })
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -31,7 +37,7 @@ export class CreateOfferDto {
   @IsNotEmpty()
   zoneTrackingId: string;
 
-  @ApiPropertyOptional({ description: 'Statut de l\'offre' })
+  @ApiPropertyOptional({ description: "Statut de l'offre" })
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;

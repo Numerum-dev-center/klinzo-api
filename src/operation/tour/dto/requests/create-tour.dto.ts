@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateTourDto {
   @ApiProperty({ description: 'Tracking ID of the vehicle' })
@@ -12,7 +17,9 @@ export class CreateTourDto {
   @IsNotEmpty()
   scheduledDate: string;
 
-  @ApiPropertyOptional({ description: 'Reference for the tour. If omitted, will be auto-generated.' })
+  @ApiPropertyOptional({
+    description: 'Reference for the tour. If omitted, will be auto-generated.',
+  })
   @IsString()
   @IsOptional()
   reference?: string;

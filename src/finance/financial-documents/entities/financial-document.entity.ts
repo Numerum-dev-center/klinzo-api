@@ -14,7 +14,7 @@ export class FinancialDocumentEntity {
   documentUrl: string | null;
   dueDate: Date | null;
   settledAt: Date | null;
-  metadata: any | null;
+  metadata: any;
 
   constructor(partial: Partial<FinancialDocumentEntity>) {
     Object.assign(this, partial);

@@ -12,10 +12,10 @@ export class TourResponse {
   scheduledDate: Date;
 
   @ApiPropertyOptional()
-  actualStartTime?: Date;
+  actualStartTime?: Date | null;
 
   @ApiPropertyOptional()
-  actualEndTime?: Date;
+  actualEndTime?: Date | null;
 
   @ApiProperty({ enum: TourStatus })
   status: TourStatus;
@@ -30,6 +30,14 @@ export class TourResponse {
   collectionEventsCount?: number;
 
   constructor(partial: Partial<TourResponse>) {
-    Object.assign(this, partial);
+    this.trackingId = partial.trackingId!;
+    this.reference = partial.reference!;
+    this.scheduledDate = partial.scheduledDate!;
+    this.actualStartTime = partial.actualStartTime;
+    this.actualEndTime = partial.actualEndTime;
+    this.status = partial.status!;
+    this.createdAt = partial.createdAt!;
+    this.updatedAt = partial.updatedAt!;
+    this.collectionEventsCount = partial.collectionEventsCount;
   }
 }

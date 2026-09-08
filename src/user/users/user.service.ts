@@ -5,7 +5,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { CreateUserDto } from './dto/requests/create-user.dto';
 import { UpdateUserDto } from './dto/requests/update-user.dto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -13,21 +12,38 @@ import { UserEntity } from './entities/user.entity';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
 import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
+import {
+  assertCollectorScope,
+  isCollectorRole,
+  RequestingUser,
+} from '../../shared/security/requesting-user';
 
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   private validateRoleAndCollector(role: Role, collectorTrackingId?: string) {
-    const isSaaSRole = ([Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS] as Role[]).includes(role);
-    const isCollectorRole = ([Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR] as Role[]).includes(role);
+    const isSaaSRole = (
+      [
+        Role.SUPER_ADMIN_SAAS,
+        Role.GESTIONNAIRE_SAAS,
+        Role.SUPPORT_SAAS,
+      ] as Role[]
+    ).includes(role);
+    const isCollectorRole = (
+      [Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR] as Role[]
+    ).includes(role);
 
     if (isSaaSRole && collectorTrackingId) {
-      throw new BadRequestException("Un membre de l'équipe SaaS ne peut pas être rattaché à un collecteur.");
+      throw new BadRequestException(
+        "Un membre de l'équipe SaaS ne peut pas être rattaché à un collecteur.",
+      );
     }
-    
+
     if (isCollectorRole && !collectorTrackingId) {
-      throw new BadRequestException(`Un utilisateur avec le rôle ${role} doit obligatoirement fournir un collectorTrackingId.`);
+      throw new BadRequestException(
+        `Un utilisateur avec le rôle ${role} doit obligatoirement fournir un collectorTrackingId.`,
+      );
     }
   }
 
@@ -76,12 +92,12 @@ export class UserService {
     const itemCount = await this.prisma.user.count();
     const users = await this.prisma.user.findMany({
       skip: pageOptionsDto.skip,
-      take: pageOptionsDto.size,
+      take: pageOptionsDto.take,
       orderBy: { createdAt: 'desc' },
     });
 
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-    const entities = users.map((user) => new UserEntity(user as any));
+    const entities = users.map((user) => new UserEntity(user));
 
     return new PageDto(entities, pageMetaDto);
   }
@@ -89,6 +105,7 @@ export class UserService {
   async findAllByCollector(
     collectorTrackingId: string,
     pageOptionsDto: PageOptionsDto,
+    requestingUser: RequestingUser,
   ): Promise<PageDto<UserEntity>> {
     const collector = await this.prisma.collector.findUnique({
       where: { trackingId: collectorTrackingId },
@@ -97,18 +114,19 @@ export class UserService {
     if (!collector) {
       throw new NotFoundException('Collector not found');
     }
+    await this.assertCanAccessCollector(collector.id, requestingUser);
 
     const where = { collectorId: collector.id };
     const itemCount = await this.prisma.user.count({ where });
     const users = await this.prisma.user.findMany({
       where,
       skip: pageOptionsDto.skip,
-      take: pageOptionsDto.size,
+      take: pageOptionsDto.take,
       orderBy: { createdAt: 'desc' },
     });
 
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
-    const entities = users.map((user) => new UserEntity(user as any));
+    const entities = users.map((user) => new UserEntity(user));
 
     return new PageDto(entities, pageMetaDto);
   }
@@ -126,7 +144,10 @@ export class UserService {
     }
 
     const { collector, ...userData } = user;
-    return new UserEntity({ ...userData, collectorTrackingId: collector?.trackingId });
+    return new UserEntity({
+      ...userData,
+      collectorTrackingId: collector?.trackingId,
+    });
   }
 
   async update(
@@ -134,6 +155,15 @@ export class UserService {
     updateUserDto: UpdateUserDto,
   ): Promise<UserEntity> {
     await this.findOne(trackingId); // Ensure user exists
+
+    if (updateUserDto.email) {
+      const existingEmailOwner = await this.prisma.user.findUnique({
+        where: { email: updateUserDto.email },
+      });
+      if (existingEmailOwner && existingEmailOwner.trackingId !== trackingId) {
+        throw new ConflictException('Email already in use');
+      }
+    }
 
     let hashedPassword: string | undefined;
     if (updateUserDto.password) {
@@ -164,13 +194,13 @@ export class UserService {
 
   // --- Méthodes internes pour l'Auth ---
 
-  async findByEmail(email: string) {
+  findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
     });
   }
 
-  async findByTrackingIdForAuth(trackingId: string) {
+  findByTrackingIdForAuth(trackingId: string) {
     return this.prisma.user.findUnique({
       where: { trackingId },
     });
@@ -193,5 +223,18 @@ export class UserService {
       where: { trackingId },
       data: { hashedRefreshToken: null },
     });
+  }
+
+  private async assertCanAccessCollector(
+    collectorId: bigint,
+    requestingUser: RequestingUser,
+  ): Promise<void> {
+    if (!isCollectorRole(requestingUser.role)) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { trackingId: requestingUser.trackingId },
+      select: { collectorId: true },
+    });
+    assertCollectorScope(user, collectorId);
   }
 }

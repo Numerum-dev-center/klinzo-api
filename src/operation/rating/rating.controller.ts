@@ -1,12 +1,24 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ClassSerializerInterceptor,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RatingService } from './rating.service';
 import { CreateRatingDto } from './dto/requests/create-rating.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+import { CurrentUser } from '../../shared/security/current-user.decorator';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import type { RequestingUser } from '../../shared/security/requesting-user';
 
 @ApiTags('Ratings')
 @ApiBearerAuth()
@@ -18,9 +30,11 @@ export class RatingController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.USAGER)
-  create(@Body() createRatingDto: CreateRatingDto, @Req() req: any) {
-    // req.user.trackingId holds the trackingId of the user from the JWT payload
-    return this.ratingService.create(createRatingDto, req.user.trackingId);
+  create(
+    @Body() createRatingDto: CreateRatingDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.ratingService.create(createRatingDto, user.trackingId);
   }
 
   @Get()
@@ -31,17 +45,40 @@ export class RatingController {
   }
 
   @Get('collector/:collectorTrackingId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.SUPPORT_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+  )
   findAllByCollector(
     @Param('collectorTrackingId') collectorTrackingId: string,
-    @Query() pageOptionsDto: PageOptionsDto
+    @Query() pageOptionsDto: PageOptionsDto,
+    @CurrentUser() user: RequestingUser,
   ) {
-    return this.ratingService.findAllByCollector(collectorTrackingId, pageOptionsDto);
+    return this.ratingService.findAllByCollector(
+      collectorTrackingId,
+      pageOptionsDto,
+      user,
+    );
   }
 
   @Get(':trackingId')
-  @UseGuards(JwtAuthGuard)
-  findOne(@Param('trackingId') trackingId: string) {
-    return this.ratingService.findOne(trackingId);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.SUPPORT_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+    Role.USAGER,
+  )
+  findOne(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.ratingService.findOne(trackingId, user);
   }
 }

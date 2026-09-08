@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { UserService } from '../user/users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -17,7 +21,7 @@ export class AuthService {
 
   async register(createUserDto: CreateUserDto) {
     // Force role to USAGER for public registration
-    const userDto = { ...createUserDto, role: Role.USAGER };
+    const userDto = { ...createUserDto, role: Role.USAGER, isActive: true };
     const user = await this.userService.create(userDto);
     const tokens = await this.getTokens(user.trackingId, user.email, user.role);
     await this.userService.updateRefreshToken(
@@ -30,6 +34,7 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.userService.findByEmail(loginDto.email);
     if (!user) throw new UnauthorizedException('Identifiants invalides');
+    if (!user.isActive) throw new UnauthorizedException('Compte désactivé');
 
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
@@ -57,7 +62,7 @@ export class AuthService {
       });
 
       const user = await this.userService.findByTrackingIdForAuth(payload.sub);
-      if (!user || !user.hashedRefreshToken) {
+      if (!user || !user.isActive || !user.hashedRefreshToken) {
         throw new ForbiddenException('Access denied');
       }
 
@@ -69,13 +74,17 @@ export class AuthService {
         throw new ForbiddenException('Access denied');
       }
 
-      const tokens = await this.getTokens(user.trackingId, user.email, user.role);
+      const tokens = await this.getTokens(
+        user.trackingId,
+        user.email,
+        user.role,
+      );
       await this.userService.updateRefreshToken(
         user.trackingId,
         tokens.refreshToken,
       );
       return tokens;
-    } catch (e) {
+    } catch {
       throw new ForbiddenException('Invalid refresh token');
     }
   }

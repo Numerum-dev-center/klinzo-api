@@ -33,6 +33,7 @@ model User {
   collector          Collector?     @relation(fields: [collectorId], references: [id])
   subscriptions      Subscription[]
   ratings            Rating[]
+  pickupRequests     PickupRequest[]
 }
 
 enum KycStatus {
@@ -125,6 +126,37 @@ model Collector {
   offers             Offer[]
   ratings            Rating[]
   financialDocuments FinancialDocument[]
+  pickupRequests     PickupRequest[]
+}
+
+enum PickupRequestStatus {
+  NEW
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model PickupRequest {
+  id              BigInt              @id @default(autoincrement())
+  trackingId      String              @unique @default(uuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  status          PickupRequestStatus @default(NEW)
+  wasteType       String
+  addressText     String
+  latitude        Float?
+  longitude       Float?
+  preferredDate   DateTime?
+  scheduledDate   DateTime?
+  completedAt     DateTime?
+  estimatedPrice  Float?
+  finalPrice      Float?
+  notes           String?
+  cancellationReason String?
+  userId          BigInt
+  user            User                @relation(fields: [userId], references: [id])
+  collectorId     BigInt
+  collector       Collector           @relation(fields: [collectorId], references: [id])
 }
 
 model Subscription {
@@ -237,6 +269,32 @@ model Transaction {
   subscription        Subscription       @relation(fields: [subscriptionId], references: [id])
   financialDocumentId BigInt?
   financialDocument   FinancialDocument? @relation(fields: [financialDocumentId], references: [id])
+  bankStatementLines   BankStatementLine[]
+}
+
+enum BankStatementLineStatus {
+  UNMATCHED
+  MATCHED
+  IGNORED
+}
+
+model BankStatementLine {
+  id              BigInt                  @id @default(autoincrement())
+  trackingId      String                  @unique @default(uuid())
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  statementDate   DateTime
+  label           String
+  amount          Float
+  reference       String?
+  source          String?
+  status          BankStatementLineStatus @default(UNMATCHED)
+  transactionId   BigInt?
+  transaction     Transaction?            @relation(fields: [transactionId], references: [id])
+  matchedAt       DateTime?
+
+  @@index([status, statementDate])
+  @@index([reference])
 }
 
 enum FinancialDocumentType {
@@ -270,4 +328,47 @@ model FinancialDocument {
   settledAt    DateTime?
   metadata     Json
   transactions Transaction[]
+}
+
+enum CommunicationChannel {
+  SMS
+  EMAIL
+  PUSH
+}
+
+enum CommunicationCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  CANCELLED
+}
+
+model MessageTemplate {
+  id         BigInt               @id @default(autoincrement())
+  trackingId String               @unique @default(uuid())
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  name       String
+  channel    CommunicationChannel
+  language   String               @default("fr")
+  subject    String?
+  content    String
+  isActive   Boolean              @default(true)
+  campaigns  CommunicationCampaign[]
+}
+
+model CommunicationCampaign {
+  id              BigInt                      @id @default(autoincrement())
+  trackingId      String                      @unique @default(uuid())
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  name            String
+  channel         CommunicationChannel
+  audience        String
+  status          CommunicationCampaignStatus @default(DRAFT)
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  templateId      BigInt?
+  template        MessageTemplate?            @relation(fields: [templateId], references: [id])
+  messageSnapshot String
 }

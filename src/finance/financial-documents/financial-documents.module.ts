@@ -11,8 +11,8 @@ import { SharedModule } from '../../shared/shared.module';
   providers: [
     FinancialDocumentsService,
     PayoutCalculationService,
-    CollectorBillingService
+    CollectorBillingService,
   ],
-  exports: [FinancialDocumentsService]
+  exports: [FinancialDocumentsService],
 })
 export class FinancialDocumentsModule {}

@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, ClassSerializerInterceptor, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CollectorsService } from './collectors.service';
 import { CreateCollectorDto } from './dto/requests/create-collector.dto';
@@ -11,6 +23,8 @@ import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-option
 import { SearchCollectorDto } from './dto/requests/search-collector.dto';
 import { KycStatusFilterDto } from './dto/requests/kyc-status-filter.dto';
 import { TypeFilterDto } from './dto/requests/type-filter.dto';
+import { CurrentUser } from '../../shared/security/current-user.decorator';
+import type { RequestingUser } from '../../shared/security/requesting-user';
 
 @ApiTags('Collectors')
 @ApiBearerAuth()
@@ -27,52 +41,72 @@ export class CollectorsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   findAll(@Query() pageOptionsDto: PageOptionsDto) {
     return this.collectorsService.findAll(pageOptionsDto);
   }
 
   @Get('search')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   search(@Query() searchDto: SearchCollectorDto) {
     return this.collectorsService.search(searchDto);
   }
 
   @Get('active')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.USAGER)
   findActive(@Query() pageOptionsDto: PageOptionsDto) {
     return this.collectorsService.getActiveCollectors(pageOptionsDto);
   }
 
   @Get('inactive')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   findInactive(@Query() pageOptionsDto: PageOptionsDto) {
     return this.collectorsService.getInactiveCollectors(pageOptionsDto);
   }
 
   @Get('types')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   getTypes(@Query() typeDto: TypeFilterDto) {
     return this.collectorsService.findByType(typeDto);
   }
 
   @Get('kyc-statuses')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   getKycStatuses(@Query() kycDto: KycStatusFilterDto) {
     return this.collectorsService.findByKycStatus(kycDto);
   }
 
   @Get(':trackingId')
-  @UseGuards(JwtAuthGuard)
-  findOne(@Param('trackingId') trackingId: string) {
-    return this.collectorsService.findOne(trackingId);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  findOne(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectorsService.findOne(trackingId, {
+      trackingId: user.trackingId,
+      role: user.role,
+    });
   }
 
   @Patch(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
-  update(@Param('trackingId') trackingId: string, @Body() updateCollectorDto: UpdateCollectorDto) {
-    return this.collectorsService.update(trackingId, updateCollectorDto);
+  update(
+    @Param('trackingId') trackingId: string,
+    @Body() updateCollectorDto: UpdateCollectorDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectorsService.update(trackingId, updateCollectorDto, {
+      trackingId: user.trackingId,
+      role: user.role,
+    });
   }
 
   @Delete(':trackingId')

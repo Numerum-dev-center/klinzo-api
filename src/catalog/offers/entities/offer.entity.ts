@@ -1,5 +1,4 @@
 export class OfferEntity {
-  id: bigint;
   trackingId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -8,10 +7,15 @@ export class OfferEntity {
   frequency: string;
   wasteType: string;
   isActive: boolean;
-  collectorId: bigint;
-  zoneId: bigint;
 
   constructor(partial: Partial<OfferEntity>) {
-    Object.assign(this, partial);
+    this.trackingId = partial.trackingId!;
+    this.createdAt = partial.createdAt!;
+    this.updatedAt = partial.updatedAt!;
+    this.name = partial.name!;
+    this.price = partial.price!;
+    this.frequency = partial.frequency!;
+    this.wasteType = partial.wasteType!;
+    this.isActive = partial.isActive!;
   }
 }

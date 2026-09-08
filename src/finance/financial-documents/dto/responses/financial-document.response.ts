@@ -39,6 +39,17 @@ export class FinancialDocumentResponse {
   updatedAt: Date;
 
   constructor(partial: Partial<FinancialDocumentResponse>) {
-    Object.assign(this, partial);
+    this.trackingId = partial.trackingId!;
+    this.type = partial.type!;
+    this.status = partial.status!;
+    this.periodStart = partial.periodStart;
+    this.periodEnd = partial.periodEnd;
+    this.amount = partial.amount!;
+    this.documentUrl = partial.documentUrl;
+    this.dueDate = partial.dueDate;
+    this.settledAt = partial.settledAt;
+    this.metadata = partial.metadata;
+    this.createdAt = partial.createdAt!;
+    this.updatedAt = partial.updatedAt!;
   }
 }

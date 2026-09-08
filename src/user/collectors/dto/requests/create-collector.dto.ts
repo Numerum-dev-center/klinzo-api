@@ -1,4 +1,10 @@
-import { IsString, IsEmail, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { CollectorType } from '../../entities/enums/collector-type.enum';
 
 export class CreateCollectorDto {

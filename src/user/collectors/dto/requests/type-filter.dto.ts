@@ -4,7 +4,10 @@ import { PageOptionsDto } from '../../../../shared/pagination/dto/requests/page-
 import { CollectorType } from '../../entities/enums/collector-type.enum';
 
 export class TypeFilterDto extends PageOptionsDto {
-  @ApiProperty({ enum: CollectorType, description: 'Le type de collecteur recherché (ex: COMPANY)' })
+  @ApiProperty({
+    enum: CollectorType,
+    description: 'Le type de collecteur recherché (ex: COMPANY)',
+  })
   @IsEnum(CollectorType)
   @IsNotEmpty()
   type: CollectorType;

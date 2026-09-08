@@ -24,8 +24,8 @@ export class CreateUserByAdminDto {
   email: string;
 
   @IsString()
-  @IsOptional()
-  phone?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @IsString()
   @MinLength(6)
@@ -39,7 +39,10 @@ export class CreateUserByAdminDto {
   @IsOptional()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ description: 'ID du collecteur (obligatoire pour ADMIN_COLLECTEUR et AGENT_COLLECTEUR)' })
+  @ApiPropertyOptional({
+    description:
+      'ID du collecteur (obligatoire pour ADMIN_COLLECTEUR et AGENT_COLLECTEUR)',
+  })
   @IsString()
   @IsOptional()
   collectorTrackingId?: string;

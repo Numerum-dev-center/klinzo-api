@@ -4,7 +4,10 @@ import { PageOptionsDto } from '../../../../shared/pagination/dto/requests/page-
 import { KycStatus } from '../../entities/enums/kyc-status.enum';
 
 export class KycStatusFilterDto extends PageOptionsDto {
-  @ApiProperty({ enum: KycStatus, description: 'Le statut KYC recherché (ex: APPROVED)' })
+  @ApiProperty({
+    enum: KycStatus,
+    description: 'Le statut KYC recherché (ex: APPROVED)',
+  })
   @IsEnum(KycStatus)
   @IsNotEmpty()
   status: KycStatus;

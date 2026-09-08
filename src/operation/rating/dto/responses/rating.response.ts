@@ -20,6 +20,11 @@ export class RatingResponse {
   updatedAt: Date;
 
   constructor(partial: Partial<RatingResponse>) {
-    Object.assign(this, partial);
+    this.trackingId = partial.trackingId!;
+    this.score = partial.score!;
+    this.comment = partial.comment;
+    this.collectionEventTrackingId = partial.collectionEventTrackingId!;
+    this.createdAt = partial.createdAt!;
+    this.updatedAt = partial.updatedAt!;
   }
 }

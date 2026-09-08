@@ -1,26 +1,47 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards, Req, ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+  ClassSerializerInterceptor,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CollectionEventService } from './collection-event.service';
 import { CreateCollectionEventDto } from './dto/requests/create-collection-event.dto';
 import { DisputeCollectionEventDto } from './dto/requests/dispute-collection-event.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
+import { CurrentUser } from '../../shared/security/current-user.decorator';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import type { RequestingUser } from '../../shared/security/requesting-user';
 
 @ApiTags('Collection Events')
 @ApiBearerAuth()
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('collection-events')
 export class CollectionEventController {
-  constructor(private readonly collectionEventService: CollectionEventService) {}
+  constructor(
+    private readonly collectionEventService: CollectionEventService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.AGENT_COLLECTEUR)
-  create(@Body() createCollectionEventDto: CreateCollectionEventDto) {
-    return this.collectionEventService.create(createCollectionEventDto);
+  create(
+    @Body() createCollectionEventDto: CreateCollectionEventDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.create(createCollectionEventDto, {
+      trackingId: user.trackingId,
+      role: user.role,
+    });
   }
 
   @Get()
@@ -32,36 +53,70 @@ export class CollectionEventController {
 
   @Get('tour/:tourTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+  )
   findAllByTour(
     @Param('tourTrackingId') tourTrackingId: string,
-    @Query() pageOptionsDto: PageOptionsDto
+    @Query() pageOptionsDto: PageOptionsDto,
+    @CurrentUser() user: RequestingUser,
   ) {
-    return this.collectionEventService.findAllByTour(tourTrackingId, pageOptionsDto);
+    return this.collectionEventService.findAllByTour(
+      tourTrackingId,
+      pageOptionsDto,
+      user,
+    );
   }
 
   @Get('subscription/:subscriptionTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.USAGER)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+    Role.USAGER,
+  )
   findAllBySubscription(
     @Param('subscriptionTrackingId') subscriptionTrackingId: string,
-    @Query() pageOptionsDto: PageOptionsDto
+    @Query() pageOptionsDto: PageOptionsDto,
+    @CurrentUser() user: RequestingUser,
   ) {
-    return this.collectionEventService.findAllBySubscription(subscriptionTrackingId, pageOptionsDto);
+    return this.collectionEventService.findAllBySubscription(
+      subscriptionTrackingId,
+      pageOptionsDto,
+      user,
+    );
   }
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS, Role.USAGER)
-  findOne(@Param('trackingId') trackingId: string) {
-    return this.collectionEventService.findOne(trackingId);
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.GESTIONNAIRE_SAAS,
+    Role.SUPPORT_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.AGENT_COLLECTEUR,
+    Role.USAGER,
+  )
+  findOne(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.findOne(trackingId, user);
   }
 
   @Patch(':trackingId/validate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.USAGER)
-  validate(@Param('trackingId') trackingId: string, @Req() req: any) {
-    return this.collectionEventService.validate(trackingId, req.user.trackingId);
+  validate(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.validate(trackingId, user.trackingId);
   }
 
   @Patch(':trackingId/dispute')
@@ -70,8 +125,12 @@ export class CollectionEventController {
   dispute(
     @Param('trackingId') trackingId: string,
     @Body() dto: DisputeCollectionEventDto,
-    @Req() req: any
+    @CurrentUser() user: RequestingUser,
   ) {
-    return this.collectionEventService.dispute(trackingId, req.user.trackingId, dto);
+    return this.collectionEventService.dispute(
+      trackingId,
+      user.trackingId,
+      dto,
+    );
   }
 }

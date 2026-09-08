@@ -7,6 +7,6 @@ import { SharedModule } from '../../shared/shared.module';
   imports: [SharedModule],
   controllers: [TransactionsController],
   providers: [TransactionsService],
-  exports: [TransactionsService]
+  exports: [TransactionsService],
 })
 export class TransactionsModule {}

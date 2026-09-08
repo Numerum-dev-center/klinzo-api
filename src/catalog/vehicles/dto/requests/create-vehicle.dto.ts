@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, Min, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  Min,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateVehicleDto {
   @ApiProperty({ description: 'Matricule interne du véhicule' })
@@ -7,7 +14,7 @@ export class CreateVehicleDto {
   @IsNotEmpty()
   matricule: string;
 
-  @ApiProperty({ description: 'Plaque d\'immatriculation' })
+  @ApiProperty({ description: "Plaque d'immatriculation" })
   @IsString()
   @IsNotEmpty()
   licensePlate: string;

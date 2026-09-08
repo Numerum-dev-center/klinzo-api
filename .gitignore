@@ -8,6 +8,7 @@
 logs
 *.log
 npm-debug.log*
+package-lock.json
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -24,3 +25,6 @@ lerna-debug.log*
 .tmp
 
 /generated/prisma
+
+# Runtime secrets generated locally for Yeria. Production must inject keys by env.
+/storage/keys/

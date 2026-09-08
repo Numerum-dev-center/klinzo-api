@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { GeneratePayoutDto } from './financial-documents/dto/requests/generate-payout.dto';
 import { FinancialDocumentResponse } from './financial-documents/dto/responses/financial-document.response';
@@ -8,9 +12,11 @@ import { FinancialDocumentType, FinancialDocumentStatus } from '@prisma/client';
 export class PayoutCalculationService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async generatePayout(dto: GeneratePayoutDto): Promise<FinancialDocumentResponse> {
+  async generatePayout(
+    dto: GeneratePayoutDto,
+  ): Promise<FinancialDocumentResponse> {
     const collector = await this.prisma.collector.findUnique({
-      where: { trackingId: dto.collectorTrackingId }
+      where: { trackingId: dto.collectorTrackingId },
     });
 
     if (!collector) {
@@ -27,18 +33,20 @@ export class PayoutCalculationService {
         financialDocumentId: null,
         timestamp: {
           gte: periodStart,
-          lte: periodEnd
+          lte: periodEnd,
         },
         subscription: {
           offer: {
-            collectorId: collector.id
-          }
-        }
-      }
+            collectorId: collector.id,
+          },
+        },
+      },
     });
 
     if (transactions.length === 0) {
-      throw new BadRequestException('No unsettled transactions found for this collector in this period');
+      throw new BadRequestException(
+        'No unsettled transactions found for this collector in this period',
+      );
     }
 
     let grossAmount = 0;
@@ -64,19 +72,19 @@ export class PayoutCalculationService {
         metadata: {
           grossAmount,
           commissionRetained,
-          transactionIds
-        }
-      }
+          transactionIds,
+        },
+      },
     });
 
     // Update transactions to link them to this payout
     await this.prisma.transaction.updateMany({
       where: {
-        id: { in: transactions.map(t => t.id) }
+        id: { in: transactions.map((t) => t.id) },
       },
       data: {
-        financialDocumentId: document.id
-      }
+        financialDocumentId: document.id,
+      },
     });
 
     return new FinancialDocumentResponse({
@@ -91,7 +99,7 @@ export class PayoutCalculationService {
       settledAt: document.settledAt || undefined,
       metadata: document.metadata,
       createdAt: document.createdAt,
-      updatedAt: document.updatedAt
+      updatedAt: document.updatedAt,
     });
   }
 }

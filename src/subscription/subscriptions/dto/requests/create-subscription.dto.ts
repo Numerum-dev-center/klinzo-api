@@ -11,7 +11,6 @@ import {
 import { IsUUID } from 'class-validator';
 
 export class CreateSubscriptionDto {
-
   @IsNumber()
   @IsLatitude()
   latitude: number;
@@ -35,7 +34,6 @@ export class CreateSubscriptionDto {
 
   @IsUUID()
   userTrackingId: string;
-
 
   @IsUUID()
   offerTrackingId: string;
