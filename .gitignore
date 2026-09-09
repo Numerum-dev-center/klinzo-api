@@ -28,3 +28,4 @@ lerna-debug.log*
 
 # Runtime secrets generated locally for Yeria. Production must inject keys by env.
 /storage/keys/
+.vercel
