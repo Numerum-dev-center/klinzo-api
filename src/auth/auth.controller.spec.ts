@@ -19,6 +19,7 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
+<<<<<<< Updated upstream
         {
           provide: AuthService,
           useValue: authServiceMock,
@@ -27,6 +28,10 @@ describe('AuthController', () => {
           provide: UserService,
           useValue: userServiceMock,
         },
+=======
+        { provide: AuthService, useValue: {} },
+        { provide: UserService, useValue: {} },
+>>>>>>> Stashed changes
       ],
     }).compile();
 

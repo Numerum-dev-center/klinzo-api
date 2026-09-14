@@ -15,12 +15,16 @@ describe('UserController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
+<<<<<<< Updated upstream
       providers: [
         {
           provide: UserService,
           useValue: userServiceMock,
         },
       ],
+=======
+      providers: [{ provide: UserService, useValue: {} }],
+>>>>>>> Stashed changes
     }).compile();
 
     controller = module.get<UserController>(UserController);

@@ -8,7 +8,7 @@ describe('SduiController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SduiController],
-      providers: [SduiService],
+      providers: [{ provide: SduiService, useValue: {} }],
     }).compile();
 
     controller = module.get<SduiController>(SduiController);

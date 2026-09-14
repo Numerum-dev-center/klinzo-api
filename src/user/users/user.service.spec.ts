@@ -3,7 +3,10 @@ import { ConflictException } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
 import { Role } from '@prisma/client';
 import { UserService } from './user.service';
+<<<<<<< Updated upstream
 import { UserEntity } from './entities/user.entity';
+=======
+>>>>>>> Stashed changes
 import { PrismaService } from '../../shared/prisma/prisma.service';
 
 describe('UserService', () => {
@@ -21,6 +24,7 @@ describe('UserService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
+<<<<<<< Updated upstream
       providers: [
         UserService,
         {
@@ -28,6 +32,9 @@ describe('UserService', () => {
           useValue: prismaServiceMock,
         },
       ],
+=======
+      providers: [UserService, { provide: PrismaService, useValue: {} }],
+>>>>>>> Stashed changes
     }).compile();
 
     service = module.get<UserService>(UserService);
