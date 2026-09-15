@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 import { CollectionEventService } from './collection-event.service';
 import { CollectionEventResponse } from './dto/responses/collection-event.response';
 
@@ -97,7 +98,7 @@ describe('CollectionEventService', () => {
 
     const result = await service.findAllBySubscription(
       'subscription-1',
-      { skip: 0, size: 20 },
+      new PageOptionsDto(),
       {
         trackingId: 'collector-admin',
         role: Role.ADMIN_COLLECTEUR,

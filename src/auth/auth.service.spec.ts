@@ -1,15 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
-<<<<<<< Updated upstream
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/users/user.service';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-=======
-import { UserService } from '../user/users/user.service';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
->>>>>>> Stashed changes
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -34,7 +28,6 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-<<<<<<< Updated upstream
         {
           provide: UserService,
           useValue: userServiceMock,
@@ -47,11 +40,6 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: configServiceMock,
         },
-=======
-        { provide: UserService, useValue: {} },
-        { provide: JwtService, useValue: {} },
-        { provide: ConfigService, useValue: {} },
->>>>>>> Stashed changes
       ],
     }).compile();
 
