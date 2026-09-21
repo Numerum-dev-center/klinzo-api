@@ -50,6 +50,38 @@ enum CollectorType {
   ASSOCIATION
 }
 
+enum CollectorApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CollectorApplication {
+  id                  BigInt                     @id @default(autoincrement())
+  trackingId          String                     @unique @default(uuid())
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  companyName         String
+  registrationNumber  String
+  type                CollectorType
+  adresse             String
+  firstName           String
+  lastName            String
+  contactEmail        String
+  contactPhone        String
+  status              CollectorApplicationStatus @default(PENDING)
+  rejectionReason     String?
+  collectorTrackingId String?
+  userTrackingId      String?
+  inviteTokenHash     String?                    @unique
+  inviteExpiresAt     DateTime?
+  invitedAt           DateTime?
+  activatedAt         DateTime?
+
+  @@index([status, createdAt])
+  @@index([contactEmail])
+}
+
 model Vehicle {
   id           BigInt    @id @default(autoincrement())
   trackingId   String    @unique @default(uuid())

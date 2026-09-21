@@ -11,6 +11,11 @@ const PRODUCTION_REQUIRED_VARIABLES = [
   'BACKEND_URL',
   'YERIA_PRIVATE_KEY',
   'YERIA_PUBLIC_KEY',
+  'FRONTEND_URL',
+  'SMTP_HOST',
+  'SMTP_USER',
+  'SMTP_PASSWORD',
+  'SMTP_FROM',
 ] as const;
 
 const PLACEHOLDER_VALUES = new Set([
@@ -98,6 +103,22 @@ export function validateEnvironment(
     }
 
     config[key] = String(value);
+  }
+
+  const smtpPort = Number(readEnv(config, 'SMTP_PORT') || '587');
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+    throw new Error('SMTP_PORT must be an integer between 1 and 65535.');
+  }
+  config.SMTP_PORT = String(smtpPort);
+
+  const frontendUrl = readEnv(config, 'FRONTEND_URL');
+  if (frontendUrl) {
+    try {
+      const url = new URL(frontendUrl);
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+    } catch {
+      throw new Error('FRONTEND_URL must be an HTTP(S) URL.');
+    }
   }
 
   return config;
