@@ -107,16 +107,8 @@ export function getYeriaServiceId(): string {
 }
 
 export function getBaseBackendUrl(): string {
-  const envPath = path.join(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    const match = envContent.match(/^BACKEND_URL=(.+)$/m);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
   if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL;
+    return process.env.BACKEND_URL.trim();
   }
   const port = process.env.PORT || 4000;
   return `http://localhost:${port}`;
