@@ -13,6 +13,11 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/users/dto/requests/create-user.dto';
 import { LoginDto } from './dto/requests/login.dto';
 import { RefreshTokenDto } from './dto/requests/refresh-token.dto';
+import { VerifyEmailDto } from './dto/requests/verify-email.dto';
+import { ResendVerificationDto } from './dto/requests/resend-verification.dto';
+import { RequestPasswordResetDto } from './dto/requests/request-password-reset.dto';
+import { ResetPasswordDto } from './dto/requests/reset-password.dto';
+import { ChangePasswordDto } from './dto/requests/change-password.dto';
 import { JwtAuthGuard } from '../shared/security/jwt-auth.guard';
 import { CurrentUser } from '../shared/security/current-user.decorator';
 import { UserService } from '../user/users/user.service';
@@ -32,6 +37,48 @@ export class AuthController {
   @RateLimit({ limit: 5, windowMs: 60_000 })
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('verify-email')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000 })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.email, dto.code);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('resend-verification-code')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000 })
+  async resendVerificationCode(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerificationCode(dto.email);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('request-password-reset')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 5, windowMs: 60_000 })
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('reset-password')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ limit: 10, windowMs: 60_000 })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.code, dto.password);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('change-password')
+  async changePassword(
+    @CurrentUser() user: any,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.trackingId, dto.password);
   }
 
   @HttpCode(HttpStatus.OK)

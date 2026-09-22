@@ -6,9 +6,10 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RateLimitGuard } from '../shared/security/rate-limit.guard';
+import { SharedModule } from '../shared/shared.module';
 
 @Module({
-  imports: [UserModule, PassportModule, JwtModule.register({})],
+  imports: [SharedModule, UserModule, PassportModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RateLimitGuard],
 })
