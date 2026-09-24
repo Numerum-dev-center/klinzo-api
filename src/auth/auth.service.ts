@@ -17,6 +17,7 @@ import { Role } from '@prisma/client';
 import { createHash, randomInt } from 'node:crypto';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../shared/prisma/prisma.service';
+import { buildKlinzoEmail } from '../shared/mail/klinzo-email-template';
 
 const CODE_LIFETIME_MS = 10 * 60 * 1000;
 const RESEND_DELAY_MS = 60 * 1000;
@@ -48,7 +49,9 @@ export class AuthService {
 
   private codeHash(email: string, code: string): string {
     return createHash('sha256')
-      .update(`${email.toLowerCase()}:${code}:${this.configService.get<string>('JWT_SECRET')}`)
+      .update(
+        `${email.toLowerCase()}:${code}:${this.configService.get<string>('JWT_SECRET')}`,
+      )
       .digest('hex');
   }
 
@@ -70,22 +73,36 @@ export class AuthService {
     const pass = this.configService.get<string>('SMTP_PASSWORD');
     const from = this.configService.get<string>('SMTP_FROM');
     if (!host || !user || !pass || !from) {
-      this.logger.warn('Code de vérification non envoyé : configuration SMTP manquante.');
+      this.logger.warn(
+        'Code de vérification non envoyé : configuration SMTP manquante.',
+      );
       return false;
     }
 
     try {
       const transport = nodemailer.createTransport({
-        host, port, secure: port === 465, requireTLS: port !== 465,
+        host,
+        port,
+        secure: port === 465,
+        requireTLS: port !== 465,
         auth: { user, pass },
       });
       await transport.sendMail({
-        from, to: email,
+        from,
+        to: email,
         subject: 'Vérifiez votre adresse e-mail Klinzo',
         text: `Votre code de vérification Klinzo est ${code}. Il expire dans 10 minutes. Si vous n'avez pas créé de compte, ignorez ce message.`,
+        html: buildKlinzoEmail({
+          title: 'Vérifiez votre adresse e-mail',
+          preheader: `Votre code de vérification KLINZO est ${code}`,
+          message:
+            "Utilisez le code ci-dessous pour confirmer votre adresse e-mail. Ce code expire dans 10 minutes. Si vous n'avez pas créé de compte, ignorez ce message.",
+          code,
+        }),
       });
       await this.prisma.user.update({
-        where: { email }, data: { emailVerificationSentAt: new Date() },
+        where: { email },
+        data: { emailVerificationSentAt: new Date() },
       });
       return true;
     } catch (error) {
@@ -98,31 +115,51 @@ export class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
     const account = await this.userService.findByEmail(normalizedEmail);
     if (!account || account.role !== Role.USAGER || account.emailVerified) {
-      return { message: 'Si ce compte attend une vérification, un code sera envoyé.' };
+      return {
+        message: 'Si ce compte attend une vérification, un code sera envoyé.',
+      };
     }
-    if (account.emailVerificationSentAt &&
-        Date.now() - account.emailVerificationSentAt.getTime() < RESEND_DELAY_MS) {
-      throw new HttpException('Patientez une minute avant de demander un autre code.', HttpStatus.TOO_MANY_REQUESTS);
+    if (
+      account.emailVerificationSentAt &&
+      Date.now() - account.emailVerificationSentAt.getTime() < RESEND_DELAY_MS
+    ) {
+      throw new HttpException(
+        'Patientez une minute avant de demander un autre code.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     const emailSent = await this.issueVerificationCode(normalizedEmail);
-    return { message: emailSent ? 'Un nouveau code a été envoyé.' : 'Envoi impossible pour le moment. Réessayez plus tard.' };
+    return {
+      message: emailSent
+        ? 'Un nouveau code a été envoyé.'
+        : 'Envoi impossible pour le moment. Réessayez plus tard.',
+    };
   }
 
   async verifyEmail(email: string, code: string) {
     const normalizedEmail = email.trim().toLowerCase();
     const account = await this.userService.findByEmail(normalizedEmail);
-    if (!account || account.role !== Role.USAGER || account.emailVerified ||
-        !account.emailVerificationCodeHash || !account.emailVerificationExpiresAt) {
+    if (
+      !account ||
+      account.role !== Role.USAGER ||
+      account.emailVerified ||
+      !account.emailVerificationCodeHash ||
+      !account.emailVerificationExpiresAt
+    ) {
       throw new BadRequestException('Code invalide ou expiré.');
     }
     if (account.emailVerificationExpiresAt.getTime() < Date.now()) {
       throw new BadRequestException('Code expiré. Demandez un nouveau code.');
     }
     if (account.emailVerificationAttempts >= MAX_ATTEMPTS) {
-      throw new BadRequestException('Trop de tentatives. Demandez un nouveau code.');
+      throw new BadRequestException(
+        'Trop de tentatives. Demandez un nouveau code.',
+      );
     }
 
-    const matches = this.codeHash(normalizedEmail, code) === account.emailVerificationCodeHash;
+    const matches =
+      this.codeHash(normalizedEmail, code) ===
+      account.emailVerificationCodeHash;
     if (!matches) {
       await this.prisma.user.update({
         where: { email: normalizedEmail },
@@ -147,27 +184,44 @@ export class AuthService {
         emailVerificationAttempts: 0,
       },
     });
-    if (claimed.count !== 1) throw new BadRequestException('Code invalide ou expiré.');
-    const tokens = await this.getTokens(account.trackingId, account.email, account.role, account.sessionVersion);
-    await this.userService.updateRefreshToken(account.trackingId, tokens.refreshToken);
+    if (claimed.count !== 1)
+      throw new BadRequestException('Code invalide ou expiré.');
+    const tokens = await this.getTokens(
+      account.trackingId,
+      account.email,
+      account.role,
+      account.sessionVersion,
+    );
+    await this.userService.updateRefreshToken(
+      account.trackingId,
+      tokens.refreshToken,
+    );
     return { tokens, role: account.role };
   }
 
   private resetCodeHash(email: string, code: string): string {
     return createHash('sha256')
-      .update(`password-reset:${email.toLowerCase()}:${code}:${this.configService.get<string>('JWT_SECRET')}`)
+      .update(
+        `password-reset:${email.toLowerCase()}:${code}:${this.configService.get<string>('JWT_SECRET')}`,
+      )
       .digest('hex');
   }
 
   async requestPasswordReset(email: string) {
-    const response = { message: 'Si un compte actif existe pour cette adresse, un code de réinitialisation sera envoyé.' };
+    const response = {
+      message:
+        'Si un compte actif existe pour cette adresse, un code de réinitialisation sera envoyé.',
+    };
     const normalizedEmail = email.trim();
     const account = await this.prisma.user.findFirst({
       where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     });
     if (!account || !account.isActive) return response;
-    if (account.passwordResetSentAt &&
-        Date.now() - account.passwordResetSentAt.getTime() < RESEND_DELAY_MS) return response;
+    if (
+      account.passwordResetSentAt &&
+      Date.now() - account.passwordResetSentAt.getTime() < RESEND_DELAY_MS
+    )
+      return response;
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     await this.prisma.user.update({
@@ -186,22 +240,36 @@ export class AuthService {
     const pass = this.configService.get<string>('SMTP_PASSWORD');
     const from = this.configService.get<string>('SMTP_FROM');
     if (!host || !user || !pass || !from) {
-      this.logger.warn('Réinitialisation non envoyée : configuration SMTP manquante.');
+      this.logger.warn(
+        'Réinitialisation non envoyée : configuration SMTP manquante.',
+      );
       return response;
     }
 
     try {
       const transport = nodemailer.createTransport({
-        host, port, secure: port === 465, requireTLS: port !== 465,
+        host,
+        port,
+        secure: port === 465,
+        requireTLS: port !== 465,
         auth: { user, pass },
       });
       await transport.sendMail({
-        from, to: account.email,
+        from,
+        to: account.email,
         subject: 'Réinitialisez votre mot de passe Klinzo',
         text: `Votre code de réinitialisation Klinzo est ${code}. Il expire dans 10 minutes. Si vous n'avez pas demandé ce changement, ignorez ce message.`,
+        html: buildKlinzoEmail({
+          title: 'Réinitialisez votre mot de passe',
+          preheader: `Votre code de réinitialisation KLINZO est ${code}`,
+          message:
+            "Utilisez le code ci-dessous pour choisir un nouveau mot de passe. Ce code expire dans 10 minutes. Si vous n'avez pas demandé ce changement, ignorez ce message.",
+          code,
+        }),
       });
       await this.prisma.user.update({
-        where: { email: account.email }, data: { passwordResetSentAt: new Date() },
+        where: { email: account.email },
+        data: { passwordResetSentAt: new Date() },
       });
     } catch (error) {
       this.logger.error('Échec de l’envoi du code de réinitialisation.', error);
@@ -213,12 +281,21 @@ export class AuthService {
     const account = await this.prisma.user.findFirst({
       where: { email: { equals: email.trim(), mode: 'insensitive' } },
     });
-    if (!account || !account.isActive || !account.passwordResetCodeHash ||
-        !account.passwordResetExpiresAt || account.passwordResetExpiresAt.getTime() <= Date.now() ||
-        account.passwordResetAttempts >= MAX_ATTEMPTS) {
-      throw new BadRequestException('Code invalide ou expiré. Demandez un nouveau code.');
+    if (
+      !account ||
+      !account.isActive ||
+      !account.passwordResetCodeHash ||
+      !account.passwordResetExpiresAt ||
+      account.passwordResetExpiresAt.getTime() <= Date.now() ||
+      account.passwordResetAttempts >= MAX_ATTEMPTS
+    ) {
+      throw new BadRequestException(
+        'Code invalide ou expiré. Demandez un nouveau code.',
+      );
     }
-    if (this.resetCodeHash(account.email, code) !== account.passwordResetCodeHash) {
+    if (
+      this.resetCodeHash(account.email, code) !== account.passwordResetCodeHash
+    ) {
       await this.prisma.user.update({
         where: { email: account.email },
         data: { passwordResetAttempts: { increment: 1 } },
@@ -244,8 +321,12 @@ export class AuthService {
         passwordResetAttempts: 0,
       },
     });
-    if (claimed.count !== 1) throw new BadRequestException('Code invalide ou expiré.');
-    return { message: 'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.' };
+    if (claimed.count !== 1)
+      throw new BadRequestException('Code invalide ou expiré.');
+    return {
+      message:
+        'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.',
+    };
   }
 
   async changePassword(trackingId: string, password: string) {
@@ -258,7 +339,10 @@ export class AuthService {
         sessionVersion: { increment: 1 },
       },
     });
-    return { message: 'Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.' };
+    return {
+      message:
+        'Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.',
+    };
   }
 
   async login(loginDto: LoginDto) {
@@ -273,10 +357,17 @@ export class AuthService {
     if (!isPasswordValid)
       throw new UnauthorizedException('Identifiants invalides');
     if (user.role === Role.USAGER && !user.emailVerified) {
-      throw new ForbiddenException('Adresse e-mail non vérifiée. Saisissez le code reçu par e-mail.');
+      throw new ForbiddenException(
+        'Adresse e-mail non vérifiée. Saisissez le code reçu par e-mail.',
+      );
     }
 
-    const tokens = await this.getTokens(user.trackingId, user.email, user.role, user.sessionVersion);
+    const tokens = await this.getTokens(
+      user.trackingId,
+      user.email,
+      user.role,
+      user.sessionVersion,
+    );
     await this.userService.updateRefreshToken(
       user.trackingId,
       tokens.refreshToken,
@@ -295,8 +386,13 @@ export class AuthService {
       });
 
       const user = await this.userService.findByTrackingIdForAuth(payload.sub);
-      if (!user || !user.isActive || (payload.sessionVersion ?? 0) !== (user.sessionVersion ?? 0) ||
-          (user.role === Role.USAGER && !user.emailVerified) || !user.hashedRefreshToken) {
+      if (
+        !user ||
+        !user.isActive ||
+        (payload.sessionVersion ?? 0) !== (user.sessionVersion ?? 0) ||
+        (user.role === Role.USAGER && !user.emailVerified) ||
+        !user.hashedRefreshToken
+      ) {
         throw new ForbiddenException('Access denied');
       }
 
@@ -324,7 +420,12 @@ export class AuthService {
     }
   }
 
-  async getTokens(trackingId: string, email: string, role: string, sessionVersion = 0) {
+  async getTokens(
+    trackingId: string,
+    email: string,
+    role: string,
+    sessionVersion = 0,
+  ) {
     const jwtPayload = { sub: trackingId, email, role, sessionVersion };
 
     const [accessToken, refreshToken] = await Promise.all([
