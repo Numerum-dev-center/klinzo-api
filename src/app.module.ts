@@ -12,6 +12,7 @@ import { PlatformSettingsController } from './platform-settings/platform-setting
 import { ReportingModule } from './reporting/reporting.module';
 import { CommunicationModule } from './communication/communication.module';
 import { ReconciliationModule } from './finance/reconciliation/reconciliation.module';
+import { CollectorApplicationsModule } from './collector-applications/collector-applications.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ReconciliationModule } from './finance/reconciliation/reconciliation.mo
     ReportingModule,
     CommunicationModule,
     ReconciliationModule,
+    CollectorApplicationsModule,
   ],
   controllers: [HealthController, PlatformSettingsController],
   providers: [], // Vide, car on a supprimé app.service.ts

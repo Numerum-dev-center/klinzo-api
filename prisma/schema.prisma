@@ -24,6 +24,15 @@ model User {
   lastName           String
   email              String         @unique
   emailVerified      Boolean        @default(false)
+  emailVerificationCodeHash String?
+  emailVerificationExpiresAt DateTime?
+  emailVerificationSentAt DateTime?
+  emailVerificationAttempts Int @default(0)
+  passwordResetCodeHash String?
+  passwordResetExpiresAt DateTime?
+  passwordResetSentAt DateTime?
+  passwordResetAttempts Int @default(0)
+  sessionVersion Int @default(0)
   phone              String
   password           String
   hashedRefreshToken String?
@@ -48,6 +57,38 @@ enum CollectorType {
   COMPANY
   MUNICIPALITY
   ASSOCIATION
+}
+
+enum CollectorApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CollectorApplication {
+  id                  BigInt                     @id @default(autoincrement())
+  trackingId          String                     @unique @default(uuid())
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  companyName         String
+  registrationNumber  String
+  type                CollectorType
+  adresse             String
+  firstName           String
+  lastName            String
+  contactEmail        String
+  contactPhone        String
+  status              CollectorApplicationStatus @default(PENDING)
+  rejectionReason     String?
+  collectorTrackingId String?
+  userTrackingId      String?
+  inviteTokenHash     String?                    @unique
+  inviteExpiresAt     DateTime?
+  invitedAt           DateTime?
+  activatedAt         DateTime?
+
+  @@index([status, createdAt])
+  @@index([contactEmail])
 }
 
 model Vehicle {

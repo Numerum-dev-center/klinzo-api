@@ -1,10 +1,19 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { CommunicationCampaignStatus } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import {
+  CommunicationCampaignStatus,
+  CommunicationChannel,
+  Role,
+} from '@prisma/client';
+import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../shared/prisma/prisma.service';
+import { buildKlinzoEmail } from '../shared/mail/klinzo-email-template';
 import { PageDto } from '../shared/pagination/dto/requests/page.dto';
 import { PageMetaDto } from '../shared/pagination/dto/requests/page-meta.dto';
 import { PageOptionsDto } from '../shared/pagination/dto/requests/page-options.dto';
@@ -22,9 +31,165 @@ const campaignInclude = {
   },
 };
 
+type EmailRecipient = {
+  email: string;
+  firstName: string;
+  lastName: string;
+};
+
 @Injectable()
 export class CommunicationService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CommunicationService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private async resolveEmailRecipients(
+    audience: string,
+  ): Promise<EmailRecipient[]> {
+    if (audience === 'COLLECTORS') {
+      const [users, collectors] = await Promise.all([
+        this.prisma.user.findMany({
+          where: {
+            isActive: true,
+            emailVerified: true,
+            role: { in: [Role.ADMIN_COLLECTEUR, Role.AGENT_COLLECTEUR] },
+          },
+          select: { email: true, firstName: true, lastName: true },
+        }),
+        this.prisma.collector.findMany({
+          where: { isActive: true },
+          select: { contactEmail: true, companyName: true },
+        }),
+      ]);
+      const recipients = new Map<string, EmailRecipient>();
+      for (const user of users) {
+        recipients.set(user.email.toLowerCase(), user);
+      }
+      for (const collector of collectors) {
+        const email = collector.contactEmail.toLowerCase();
+        if (!recipients.has(email)) {
+          recipients.set(email, {
+            email: collector.contactEmail,
+            firstName: collector.companyName,
+            lastName: '',
+          });
+        }
+      }
+      return [...recipients.values()];
+    }
+
+    const where =
+      audience === 'SUBSCRIBERS'
+        ? { isActive: true, emailVerified: true, subscriptions: { some: {} } }
+        : audience === 'INACTIVE_USERS'
+          ? { isActive: false, emailVerified: true }
+          : audience === 'ALL_USERS'
+            ? { isActive: true, emailVerified: true }
+            : null;
+
+    if (!where) throw new BadRequestException('Unsupported campaign audience');
+    const users = await this.prisma.user.findMany({
+      where,
+      select: { email: true, firstName: true, lastName: true },
+    });
+    return [
+      ...new Map(
+        users.map((user) => [user.email.toLowerCase(), user]),
+      ).values(),
+    ];
+  }
+
+  private personalize(content: string, recipient: EmailRecipient): string {
+    const fullName = `${recipient.firstName} ${recipient.lastName}`.trim();
+    return content
+      .replaceAll('{{prenom}}', recipient.firstName)
+      .replaceAll('{{nom}}', recipient.lastName)
+      .replaceAll('{{nom_complet}}', fullName)
+      .replaceAll('{{email}}', recipient.email);
+  }
+
+  private async sendEmailCampaign(campaign: {
+    audience: string;
+    name: string;
+    messageSnapshot: string;
+    templateId: bigint | null;
+  }): Promise<void> {
+    const host = this.config.get<string>('SMTP_HOST');
+    const port = Number(this.config.get<string>('SMTP_PORT') || 587);
+    const user = this.config.get<string>('SMTP_USER');
+    const pass = this.config.get<string>('SMTP_PASSWORD');
+    const from = this.config.get<string>('SMTP_FROM');
+    if (!host || !user || !pass || !from) {
+      throw new ServiceUnavailableException('SMTP configuration is incomplete');
+    }
+
+    const recipients = await this.resolveEmailRecipients(campaign.audience);
+    if (recipients.length === 0) {
+      throw new BadRequestException(
+        'No eligible email recipient for this audience',
+      );
+    }
+
+    const template = campaign.templateId
+      ? await this.prisma.messageTemplate.findUnique({
+          where: { id: campaign.templateId },
+          select: { subject: true },
+        })
+      : null;
+    const transport = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 50,
+    });
+    const subject = template?.subject?.trim() || campaign.name;
+
+    try {
+      const results = await Promise.allSettled(
+        recipients.map(async (recipient) => {
+          const personalizedMessage = this.personalize(
+            campaign.messageSnapshot,
+            recipient,
+          );
+          await transport.sendMail({
+            from,
+            to: recipient.email,
+            subject: this.personalize(subject, recipient),
+            text: personalizedMessage,
+            html: buildKlinzoEmail({
+              title: this.personalize(subject, recipient),
+              message: personalizedMessage,
+              action: this.config.get<string>('FRONTEND_URL')
+                ? {
+                    label: 'Accéder à KLINZO',
+                    url: this.config.get<string>('FRONTEND_URL')!,
+                  }
+                : undefined,
+            }),
+          });
+        }),
+      );
+      const failedCount = results.filter(
+        (result) => result.status === 'rejected',
+      ).length;
+      if (failedCount > 0) {
+        throw new Error(`${failedCount} email(s) could not be delivered`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Campaign email delivery failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new ServiceUnavailableException(
+        'The email campaign could not be sent',
+      );
+    }
+  }
 
   async createTemplate(
     dto: CreateMessageTemplateDto,
@@ -131,6 +296,16 @@ export class CommunicationService {
         'Cancelled campaigns cannot be marked as sent',
       );
     }
+    if (campaign.status === CommunicationCampaignStatus.SENT) {
+      throw new BadRequestException('Campaign has already been sent');
+    }
+    if (campaign.channel !== CommunicationChannel.EMAIL) {
+      throw new BadRequestException(
+        'Only email campaign delivery is currently available',
+      );
+    }
+
+    await this.sendEmailCampaign(campaign);
 
     const updated = await this.prisma.communicationCampaign.update({
       where: { trackingId },
