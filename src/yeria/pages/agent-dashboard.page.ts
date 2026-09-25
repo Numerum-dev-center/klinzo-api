@@ -30,10 +30,16 @@ export function createAgentDashboardPage(
   card.addStat('En cours', `${kpis.toursInProgress}`);
   card.addStat('Ramassages validés', `${kpis.scansToday}`);
 
-  card.addSection(
-    'Actions prioritaires',
-    "• Scanner un bac abonné sur place\n• Consulter mes tournées prévues\n• Démarrer / Clôturer une tournée\n• Bilan d'activité terrain",
-  );
+  card.addAction('Ouvrir le menu', 'GET', {
+    href: '/menu',
+    variant: 'primary',
+    icon: 'menu',
+  });
+  card.addAction('Scanner un bac', 'GET', {
+    href: '/scan',
+    variant: 'secondary',
+    icon: 'qr',
+  });
 
   return card;
 }
@@ -59,5 +65,11 @@ export function createAgentMenuPage(collector: any): BaseView {
       'Historique Ramassages',
       'Liste des bacs collectés et statuts de validation',
       getYeriaAssetUrl('finance-stats.jpg'),
+    )
+    .addAction(
+      '/incident',
+      'Signaler un Incident',
+      'Accident, bac endommagé, voie inaccessible',
+      getYeriaAssetUrl('search-explore.jpg'),
     );
 }

@@ -16,7 +16,7 @@ export function createSearchZonePage(cities: string[]): BaseView {
     form.addSelectField('city', 'Ville', false, cityOptions);
   }
 
-  form.submitButton('Vérifier les zones couvertes', 'POST', '/search');
+  form.submitButton('Vérifier les zones couvertes', 'POST');
 
   return form;
 }

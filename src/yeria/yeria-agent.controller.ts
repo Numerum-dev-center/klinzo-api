@@ -116,6 +116,54 @@ export class YeriaAgentController {
     return this.yeriaService.getAgentCollectionHistory(collector);
   }
 
+  // 5b. Détail d'un événement de collecte (GAP-09)
+  @ApiOperation({ summary: "Détail d'un événement de collecte" })
+  @Get('history/:id')
+  getCollectionEventDetail(
+    @Param('id') id: string,
+    @GetAgentCollector() collector: any,
+  ) {
+    return this.yeriaService.getAgentCollectionEventDetail(id, collector);
+  }
+
+  // GAP-23: Confirmation de collecte avec statut (VALIDATED / CANCELLED)
+  @ApiOperation({ summary: 'Confirmer le statut de collecte après scan' })
+  @Get('scan/:tourTrackingId/confirm')
+  getConfirmCollectionForm(
+    @Param('tourTrackingId') tourTrackingId: string,
+    @Body() body: { qrData?: string },
+  ) {
+    return this.yeriaService.getConfirmCollectionForm(tourTrackingId, body.qrData || '');
+  }
+
+  @ApiOperation({ summary: 'Enregistrer le résultat de la collecte' })
+  @Post('scan/:tourTrackingId/confirm')
+  confirmCollection(
+    @Param('tourTrackingId') tourTrackingId: string,
+    @Body() body: { collectionStatus?: string; notes?: string; qrData?: string; gpsLat?: number; gpsLng?: number; photoUrl?: string },
+    @GetYeriaUser() user: UserEntity,
+    @GetAgentCollector() collector: any,
+  ) {
+    return this.yeriaService.confirmAgentCollection(tourTrackingId, body, user, collector);
+  }
+
+  // GAP-24: Signalement d'incident terrain
+  @ApiOperation({ summary: "Formulaire de signalement d'incident" })
+  @Get('incident')
+  getIncidentForm() {
+    return this.yeriaService.getAgentIncidentForm();
+  }
+
+  @ApiOperation({ summary: "Soumettre un incident" })
+  @Post('incident')
+  submitIncident(
+    @Body() body: { incidentType?: string; description?: string; location?: string },
+    @GetYeriaUser() user: UserEntity,
+    @GetAgentCollector() collector: any,
+  ) {
+    return this.yeriaService.submitAgentIncident(body, user, collector);
+  }
+
   // 6. Service d'images direct sous /yeria/agent/:filename pour le mobile Yeria
   @Get(':filename')
   serveAsset(@Param('filename') filename: string, @Res() res: any) {

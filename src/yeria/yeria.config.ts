@@ -63,7 +63,7 @@ export function getYeriaPublicApp(): YeriaApp {
     appId: serviceId,
     privateKey,
     publicKey,
-    baseUrl: `${serviceBaseUrl}/yeria`,
+    baseUrl: process.env.YERIA_PLATFORM_URL || 'https://yeria.app',
     viewExpirationMinutes: 120,
   });
 
@@ -83,7 +83,7 @@ export function getYeriaAgentApp(): YeriaApp {
     appId: serviceId,
     privateKey,
     publicKey,
-    baseUrl: `${serviceBaseUrl}/yeria/agent`,
+    baseUrl: process.env.YERIA_PLATFORM_URL || 'https://yeria.app',
     viewExpirationMinutes: 120,
   });
 
@@ -115,7 +115,7 @@ export function getBaseBackendUrl(): string {
 }
 
 export function getYeriaAssetUrl(filename: string): string {
-  return `/${filename}`;
+  return getYeriaAbsoluteAssetUrl(filename);
 }
 
 export function getYeriaAbsoluteAssetUrl(filename: string): string {

@@ -20,7 +20,7 @@ export function createMySubscriptionsLookupForm(): BaseView {
       'Ou numéro de souscription / Code QR bac',
       false,
     )
-    .submitButton('Retrouver mes abonnements', 'POST', '/my-subscriptions');
+    .submitButton('Retrouver mes abonnements', 'POST');
 }
 
 export function createMySubscriptionsListPage(

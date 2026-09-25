@@ -34,11 +34,7 @@ export function createSubscribeFormPage(
       false,
     );
 
-    form.submitButton(
-      'Confirmer la souscription',
-      'POST',
-      `/offers/${offer.trackingId}/subscribe`,
-    );
+    form.submitButton('Confirmer la souscription', 'POST');
 
     form.injectData({
       subscriberName: userName,
@@ -59,11 +55,7 @@ export function createSubscribeFormPage(
     form.addTextField('latitude', 'Latitude GPS (ex: 5.35995)', false);
     form.addTextField('longitude', 'Longitude GPS (ex: -4.00826)', false);
 
-    form.submitButton(
-      'Confirmer la souscription',
-      'POST',
-      `/offers/${offer.trackingId}/subscribe`,
-    );
+    form.submitButton('Confirmer la souscription', 'POST');
 
     form.injectData({
       latitude: '5.35995',

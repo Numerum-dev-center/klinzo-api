@@ -114,7 +114,17 @@ export class YeriaAuthGuard implements CanActivate {
       });
 
       if (existingByEmail) {
-        user = existingByEmail;
+        try {
+          user = await this.prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: { trackingId: String(sub) },
+          });
+        } catch {
+          user = await this.prisma.user.findFirst({
+            where: { trackingId: String(sub) },
+          });
+          if (!user) user = existingByEmail;
+        }
       } else {
         const dummyPassword = await bcrypt.hash(
           crypto.randomBytes(32).toString('hex'),

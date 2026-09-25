@@ -36,8 +36,7 @@ export async function createSubscriptionQRPage(
       qrDataUrl,
       `${offerName} — Statut: ${status}`,
       `Code Bac : ${qrCodeId}\nAdresse : ${address}\nTarif : ${price}`,
-    )
-    .submitButton('Enregistrer le QR Code', 'POST');
+    );
 
   return view;
 }

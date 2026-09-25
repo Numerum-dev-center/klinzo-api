@@ -31,7 +31,7 @@ export function createAgentScanSelectTourPage(tours: any[]): BaseView {
     'Coordonnées GPS Agent (ex: 5.35995, -4.00826)',
     false,
   );
-  form.submitButton('Ouvrir le Scanner de Bac', 'POST', '/scan');
+  form.submitButton('Ouvrir le Scanner de Bac', 'POST');
 
   return form;
 }
@@ -74,7 +74,8 @@ export function createAgentScanResultPage(
         ? `${message}\n\n• Code Bac : ${scanInfo.qrCodeId || 'N/A'}\n• Abonné : ${scanInfo.clientNom || 'Client Klinzo'}\n• Formule : ${scanInfo.formule || 'Standard'}\n• Adresse : ${scanInfo.adresse || 'N/A'}\n• Statut collecte : ${scanInfo.statut || 'VALIDÉ'}`
         : message,
     )
-    .setPrimaryAction('Scanner un autre bac', 'POST');
+    .setNext('/scan')
+    .setPrimaryAction('Scanner un autre bac', 'GET');
 
   return view;
 }

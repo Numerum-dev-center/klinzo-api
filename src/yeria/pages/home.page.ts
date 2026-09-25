@@ -31,5 +31,23 @@ export function createHomePage(user?: UserEntity): BaseView {
       'Vérifier la couverture par zone',
       'Recherchez par ville ou commune pour voir les collecteurs disponibles',
       getYeriaAssetUrl('search-explore.jpg'),
+    )
+    .addAction(
+      '/my-collections',
+      'Mes collectes',
+      'Consultez l\'historique, validez et évaluez vos collectes',
+      getYeriaAssetUrl('finance-stats.jpg'),
+    )
+    .addAction(
+      '/requests/new',
+      'Demande ponctuelle',
+      'Planifiez une collecte unique en dehors de votre abonnement',
+      getYeriaAssetUrl('organizer-header.jpg'),
+    )
+    .addAction(
+      '/disputes/new',
+      'Signaler un problème',
+      'Collecte manquée ou problème ? Signalez-le ici',
+      getYeriaAssetUrl('qr-scanner.jpg'),
     );
 }

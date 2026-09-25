@@ -26,11 +26,12 @@ export function configureApp(app: INestApplication): void {
   const configService = app.get(ConfigService);
 
   const expressApp = app as NestExpressApplication;
+  expressApp.set('trust proxy', 1);
   expressApp.useStaticAssets(path.join(process.cwd(), 'public/yeria-assets'), {
     prefix: '/yeria-assets/',
   });
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.enableCors({
     origin: parseCorsOrigin(configService),
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],

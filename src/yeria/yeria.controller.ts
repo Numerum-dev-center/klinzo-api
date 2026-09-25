@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UserEntity } from '../user/users/entities/user.entity';
 import { YeriaService } from './yeria.service';
 import { YeriaOptionalAuthGuard } from './yeria-optional-auth.guard';
+import { YeriaAuthGuard } from './yeria-auth.guard';
 import { GetYeriaUser } from './get-yeria-user.decorator';
 
 @ApiTags('Yeria Client')
@@ -109,6 +110,82 @@ export class YeriaPublicController {
     @GetYeriaUser() user?: UserEntity,
   ) {
     return this.yeriaService.findMySubscriptions(body, user);
+  }
+
+  // GAP-18: Demande de collecte ponctuelle
+  @ApiOperation({ summary: 'Formulaire de demande ponctuelle' })
+  @Get('requests/new')
+  @UseGuards(YeriaAuthGuard)
+  getOneOffRequestForm(@GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.getOneOffRequestForm(user);
+  }
+
+  @ApiOperation({ summary: 'Soumettre une demande ponctuelle' })
+  @Post('requests/new')
+  @UseGuards(YeriaAuthGuard)
+  submitOneOffRequest(
+    @Body() body: { wasteType?: string; addressText?: string; preferredDate?: string; notes?: string },
+    @GetYeriaUser() user: UserEntity,
+  ) {
+    return this.yeriaService.submitOneOffRequest(body, user);
+  }
+
+  // GAP-19 & GAP-20: Historique des collectes et validation/rating
+  @ApiOperation({ summary: 'Mes collectes (historique + validation)' })
+  @Get('my-collections')
+  @UseGuards(YeriaAuthGuard)
+  getMyCollections(@GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.getMyCollections(user);
+  }
+
+  @ApiOperation({ summary: "Détail d'une collecte" })
+  @Get('collections/:id')
+  @UseGuards(YeriaAuthGuard)
+  getCollectionDetail(@Param('id') id: string, @GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.getCollectionDetail(id, user);
+  }
+
+  @ApiOperation({ summary: "Valider une collecte" })
+  @Post('collections/:id/validate')
+  @UseGuards(YeriaAuthGuard)
+  validateCollection(@Param('id') id: string, @GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.validateCollection(id, user);
+  }
+
+  @ApiOperation({ summary: "Formulaire d'évaluation" })
+  @Get('collections/:id/rate')
+  @UseGuards(YeriaAuthGuard)
+  getRatingForm(@Param('id') id: string, @GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.getRatingForm(id, user);
+  }
+
+  @ApiOperation({ summary: "Soumettre une évaluation" })
+  @Post('collections/:id/rate')
+  @UseGuards(YeriaAuthGuard)
+  submitRating(
+    @Param('id') id: string,
+    @Body() body: { score?: string; comment?: string },
+    @GetYeriaUser() user: UserEntity,
+  ) {
+    return this.yeriaService.submitRating(id, body, user);
+  }
+
+  // GAP-21: Signalement de problème de collecte
+  @ApiOperation({ summary: 'Formulaire de signalement' })
+  @Get('disputes/new')
+  @UseGuards(YeriaAuthGuard)
+  getDisputeForm(@GetYeriaUser() user: UserEntity) {
+    return this.yeriaService.getDisputeForm(user);
+  }
+
+  @ApiOperation({ summary: 'Soumettre un signalement' })
+  @Post('disputes/new')
+  @UseGuards(YeriaAuthGuard)
+  submitDispute(
+    @Body() body: { disputeType?: string; description?: string },
+    @GetYeriaUser() user: UserEntity,
+  ) {
+    return this.yeriaService.submitDispute(body, user);
   }
 
   // 8. Service d'images direct sous /yeria/:filename pour le loader mobile Yeria

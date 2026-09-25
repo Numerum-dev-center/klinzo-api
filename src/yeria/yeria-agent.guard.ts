@@ -2,11 +2,16 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { UserDetails } from '@numerum-tech/yeriasdk';
+import {
+  UserDetails,
+  ViewExpiredError,
+  YeriaPlatformUnreachableError,
+} from '@numerum-tech/yeriasdk';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { UserEntity } from '../user/users/entities/user.entity';
 import { Role, CollectorType } from '@prisma/client';
@@ -51,11 +56,25 @@ export class YeriaAgentGuard implements CanActivate {
     let claims: any = null;
     try {
       claims = await agentApp.verifyUserToken(token, serviceId);
-    } catch {
+    } catch (e: any) {
+      if (e instanceof YeriaPlatformUnreachableError) {
+        throw new ServiceUnavailableException(
+          "Service d'authentification Yeria momentanément indisponible.",
+        );
+      }
+      const isExpired =
+        e instanceof ViewExpiredError || e?.name === 'ViewExpiredError';
       if (isProduction) {
-        throw new UnauthorizedException('Token Yeria agent invalide.');
+        throw new UnauthorizedException(
+          isExpired ? 'Token Yeria agent expiré.' : 'Token Yeria agent invalide.',
+        );
       }
       claims = parseJwtClaims(token);
+      if (!claims?.sub) {
+        throw new UnauthorizedException(
+          isExpired ? 'Token expiré.' : 'Token invalide.',
+        );
+      }
     }
 
     const sub = claims?.sub;
