@@ -32,7 +32,7 @@ export class ZonesService {
       ) VALUES (
         gen_random_uuid(), 
         ${createZoneDto.name}, 
-        ${createZoneDto.city}, 
+        ${createZoneDto.city ?? null}, 
         ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326), 
         NOW()
       ) 

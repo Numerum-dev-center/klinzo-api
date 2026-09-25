@@ -84,7 +84,12 @@ export class CollectorsController {
 
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(
+    Role.SUPER_ADMIN_SAAS,
+    Role.ADMIN_COLLECTEUR,
+    Role.GESTIONNAIRE_SAAS,
+    Role.USAGER,
+  )
   findOne(
     @Param('trackingId') trackingId: string,
     @CurrentUser() user: RequestingUser,

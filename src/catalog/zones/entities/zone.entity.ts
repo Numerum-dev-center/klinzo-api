@@ -6,7 +6,7 @@ export class ZoneCollectorSummary {
 export class ZoneEntity {
   trackingId: string;
   name: string;
-  city: string;
+  city: string | null;
   geojson: Record<string, any>;
   isActive: boolean;
   collectors?: ZoneCollectorSummary[];

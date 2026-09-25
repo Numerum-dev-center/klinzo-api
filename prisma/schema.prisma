@@ -112,7 +112,7 @@ model Zone {
   createdAt      DateTime                                @default(now())
   updatedAt      DateTime                                @updatedAt
   name           String
-  city           String
+  city           String?
   polygonPostgis Unsupported("geometry(Polygon, 4326)")?
   isActive       Boolean                                 @default(true)
   collectorZones CollectorZone[]
