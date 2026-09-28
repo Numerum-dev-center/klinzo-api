@@ -38,6 +38,10 @@ async function bootstrap() {
     origin: parseCorsOrigin(configService),
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],
+    exposedHeaders: [
+      'X-Klinzo-Contract-Version',
+      'X-Klinzo-Contract-Stability',
+    ],
   });
 
   // Validation globale et transformation (Ex: String "10" -> Number 10)

@@ -43,6 +43,21 @@ export class OffersService {
       );
     }
 
+    const zoneAssignment = await this.prisma.collectorZone.findUnique({
+      where: {
+        collectorId_zoneId: {
+          collectorId: collector.id,
+          zoneId: zone.id,
+        },
+      },
+      select: { zoneId: true },
+    });
+    if (!zoneAssignment) {
+      throw new BadRequestException(
+        'The zone is not assigned to this collector',
+      );
+    }
+
     const { collectorTrackingId, zoneTrackingId, ...data } = createOfferDto;
 
     const offer = await this.prisma.offer.create({

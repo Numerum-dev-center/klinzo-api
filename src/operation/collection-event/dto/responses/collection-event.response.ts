@@ -1,5 +1,37 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CollectionStatus } from '@prisma/client';
+import {
+  CollectionStatus,
+  DisputeDecision,
+  DisputeHistoryAction,
+  DisputeMeasure,
+  DisputeStatus,
+} from '@prisma/client';
+
+export interface DisputeHistoryResponse {
+  trackingId: string;
+  action: DisputeHistoryAction;
+  fromStatus?: DisputeStatus | null;
+  toStatus: DisputeStatus;
+  decision?: DisputeDecision | null;
+  reason?: string | null;
+  measure?: DisputeMeasure | null;
+  actorTrackingId: string;
+  createdAt: Date;
+}
+
+export interface DisputeCaseResponse {
+  trackingId: string;
+  status: DisputeStatus;
+  decision?: DisputeDecision | null;
+  resolutionReason?: string | null;
+  measure: DisputeMeasure;
+  assignedTo?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  history: DisputeHistoryResponse[];
+}
 
 export class CollectionEventResponse {
   @ApiProperty()
@@ -22,6 +54,9 @@ export class CollectionEventResponse {
 
   @ApiPropertyOptional()
   disputeReason?: string | null;
+
+  @ApiPropertyOptional()
+  dispute?: DisputeCaseResponse;
 
   @ApiPropertyOptional()
   subscriptionTrackingId?: string;
@@ -67,6 +102,7 @@ export class CollectionEventResponse {
           collector?: CollectionEventResponse['collector'];
         };
       };
+      disputeCase?: DisputeCaseResponse | null;
       rating?: { trackingId?: string } | null;
     };
 
@@ -77,6 +113,31 @@ export class CollectionEventResponse {
     this.qrScanData = partial.qrScanData;
     this.autoValidationDeadline = partial.autoValidationDeadline;
     this.disputeReason = partial.disputeReason;
+    this.dispute = source.disputeCase
+      ? {
+          trackingId: source.disputeCase.trackingId,
+          status: source.disputeCase.status,
+          decision: source.disputeCase.decision,
+          resolutionReason: source.disputeCase.resolutionReason,
+          measure: source.disputeCase.measure,
+          assignedTo: source.disputeCase.assignedTo,
+          resolvedBy: source.disputeCase.resolvedBy,
+          resolvedAt: source.disputeCase.resolvedAt,
+          createdAt: source.disputeCase.createdAt,
+          updatedAt: source.disputeCase.updatedAt,
+          history: (source.disputeCase.history ?? []).map((entry) => ({
+            trackingId: entry.trackingId,
+            action: entry.action,
+            fromStatus: entry.fromStatus,
+            toStatus: entry.toStatus,
+            decision: entry.decision,
+            reason: entry.reason,
+            measure: entry.measure,
+            actorTrackingId: entry.actorTrackingId,
+            createdAt: entry.createdAt,
+          })),
+        }
+      : partial.dispute;
     this.subscriptionTrackingId =
       partial.subscriptionTrackingId ?? source.subscription?.trackingId;
     this.user = source.subscription?.user

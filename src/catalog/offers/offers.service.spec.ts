@@ -14,6 +14,9 @@ describe('OffersService', () => {
     zone: {
       findUnique: jest.fn(),
     },
+    collectorZone: {
+      findUnique: jest.fn(),
+    },
     offer: {
       count: jest.fn(),
       create: jest.fn(),
@@ -46,6 +49,9 @@ describe('OffersService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prismaServiceMock.collectorZone.findUnique.mockResolvedValue({
+      zoneId: BigInt(1),
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -109,5 +115,23 @@ describe('OffersService', () => {
       BadRequestException,
     );
     expect(prismaServiceMock.offer.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects offer creation on a zone assigned to another collector', async () => {
+    prismaServiceMock.collector.findUnique.mockResolvedValue({
+      id: BigInt(1),
+      isActive: true,
+      kycStatus: KycStatus.APPROVED,
+    });
+    prismaServiceMock.zone.findUnique.mockResolvedValue({
+      id: BigInt(9),
+      isActive: true,
+    });
+    prismaServiceMock.collectorZone.findUnique.mockResolvedValue(null);
+
+    await expect(service.create(createDto, requester)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prismaServiceMock.offer.create).not.toHaveBeenCalled();
   });
 });

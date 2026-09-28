@@ -7,6 +7,7 @@ import {
   Query,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,9 +16,12 @@ import { UserEntity } from '../user/users/entities/user.entity';
 import { YeriaService } from './yeria.service';
 import { YeriaOptionalAuthGuard } from './yeria-optional-auth.guard';
 import { GetYeriaUser } from './get-yeria-user.decorator';
+import { YeriaContractInterceptor } from './yeria-contract.interceptor';
+import { YERIA_CONTRACT } from './yeria-contract';
 
 @ApiTags('Yeria Client')
-@Controller('yeria')
+@Controller(['api/v1/yeria', 'yeria'])
+@UseInterceptors(YeriaContractInterceptor)
 @UseGuards(YeriaOptionalAuthGuard)
 export class YeriaPublicController {
   constructor(private readonly yeriaService: YeriaService) {}
@@ -75,8 +79,11 @@ export class YeriaPublicController {
   // 5. Affichage du badge QR Code de bac par identifiant de contrat
   @ApiOperation({ summary: 'Affichage du QR Code officiel de bac' })
   @Get('subscription/:trackingId')
-  getSubscriptionQR(@Param('trackingId') trackingId: string) {
-    return this.yeriaService.getSubscriptionQR(trackingId);
+  getSubscriptionQR(
+    @Param('trackingId') trackingId: string,
+    @GetYeriaUser() user?: UserEntity,
+  ) {
+    return this.yeriaService.getSubscriptionQR(trackingId, user);
   }
 
   // 6. Formulaire de recherche de couverture par zone / commune
@@ -109,6 +116,12 @@ export class YeriaPublicController {
     @GetYeriaUser() user?: UserEntity,
   ) {
     return this.yeriaService.findMySubscriptions(body, user);
+  }
+
+  @ApiOperation({ summary: 'Version et politique du contrat Yeria' })
+  @Get('contract')
+  getContract() {
+    return YERIA_CONTRACT;
   }
 
   // 8. Service d'images direct sous /yeria/:filename pour le loader mobile Yeria

@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CollectionEventService } from './collection-event.service';
 import { CreateCollectionEventDto } from './dto/requests/create-collection-event.dto';
 import { DisputeCollectionEventDto } from './dto/requests/dispute-collection-event.dto';
+import { ResolveDisputeDto } from './dto/requests/resolve-dispute.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { CurrentUser } from '../../shared/security/current-user.decorator';
 import { RolesGuard } from '../../shared/security/roles.guard';
@@ -130,6 +131,27 @@ export class CollectionEventController {
     @CurrentUser() user: RequestingUser,
   ) {
     return this.collectionEventService.validate(trackingId, user.trackingId);
+  }
+
+  @Patch(':trackingId/dispute/review')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS)
+  startDisputeReview(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.startDisputeReview(trackingId, user);
+  }
+
+  @Patch(':trackingId/dispute/resolve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS)
+  resolveDispute(
+    @Param('trackingId') trackingId: string,
+    @Body() dto: ResolveDisputeDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.resolveDispute(trackingId, dto, user);
   }
 
   @Patch(':trackingId/dispute')

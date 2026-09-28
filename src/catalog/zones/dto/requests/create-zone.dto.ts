@@ -16,8 +16,8 @@ export class CreateZoneDto {
   @IsObject()
   geojson: Record<string, any>;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
   @IsString()
-  @IsNotEmpty()
-  collectorTrackingId: string;
+  @IsOptional()
+  collectorTrackingId?: string;
 }

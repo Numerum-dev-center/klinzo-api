@@ -28,8 +28,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload) {
     const user = await this.userService.findByTrackingIdForAuth(payload.sub);
 
-    if (!user || !user.isActive || (user.role === Role.USAGER && !user.emailVerified) ||
-        (payload.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+    if (
+      !user ||
+      !user.isActive ||
+      (user.role === Role.USAGER && !user.emailVerified) ||
+      (payload.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)
+    ) {
       throw new UnauthorizedException('Compte inactif ou introuvable');
     }
 

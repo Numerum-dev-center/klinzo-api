@@ -39,6 +39,12 @@ describe('YeriaService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
     },
+    subscription: {
+      findFirst: jest.fn(),
+    },
+    tour: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(() => {
@@ -82,5 +88,32 @@ describe('YeriaService', () => {
         },
       }),
     );
+  });
+
+  it('rejects unauthenticated subscription lookup', async () => {
+    await expect(
+      service.findMySubscriptions({ email: 'victim@example.com' }),
+    ).rejects.toThrow('Authentification Yeria requise');
+  });
+
+  it('prevents a user from opening another user subscription QR', async () => {
+    prismaServiceMock.subscription.findFirst.mockResolvedValue({
+      trackingId: 'subscription-1',
+      user: { trackingId: 'owner-1' },
+      offer: {},
+    });
+
+    await expect(
+      service.getSubscriptionQR('subscription-1', {
+        trackingId: 'other-user',
+      } as any),
+    ).rejects.toThrow('vos propres abonnements');
+  });
+
+  it('rejects agent tour listing without a linked collector', async () => {
+    await expect(service.getAgentTours(null)).rejects.toThrow(
+      'Agent terrain sans collecteur rattaché',
+    );
+    expect(prismaServiceMock.tour.findMany).not.toHaveBeenCalled();
   });
 });

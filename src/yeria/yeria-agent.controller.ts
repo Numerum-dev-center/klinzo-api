@@ -6,6 +6,7 @@ import {
   Param,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,9 +16,11 @@ import { YeriaService } from './yeria.service';
 import { YeriaAgentGuard } from './yeria-agent.guard';
 import { GetYeriaUser } from './get-yeria-user.decorator';
 import { GetAgentCollector } from './get-agent-collector.decorator';
+import { YeriaContractInterceptor } from './yeria-contract.interceptor';
 
 @ApiTags('Yeria Agent Terrain')
-@Controller('yeria/agent')
+@Controller(['api/v1/yeria/agent', 'yeria/agent'])
+@UseInterceptors(YeriaContractInterceptor)
 @UseGuards(YeriaAgentGuard)
 export class YeriaAgentController {
   constructor(private readonly yeriaService: YeriaService) {}

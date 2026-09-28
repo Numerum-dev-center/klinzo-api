@@ -8,11 +8,18 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateCollectionEventDto } from './dto/requests/create-collection-event.dto';
 import { DisputeCollectionEventDto } from './dto/requests/dispute-collection-event.dto';
+import { ResolveDisputeDto } from './dto/requests/resolve-dispute.dto';
 import { CollectionEventResponse } from './dto/responses/collection-event.response';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
 import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
-import { CollectionStatus, Role } from '@prisma/client';
+import {
+  CollectionStatus,
+  DisputeHistoryAction,
+  DisputeMeasure,
+  DisputeStatus,
+  Role,
+} from '@prisma/client';
 import {
   assertCollectorScope,
   assertUserScope,
@@ -86,6 +93,9 @@ export class CollectionEventService {
     const itemCount = await this.prisma.collectionEvent.count();
     const events = await this.prisma.collectionEvent.findMany({
       include: {
+        disputeCase: {
+          include: { history: { orderBy: { createdAt: 'asc' } } },
+        },
         subscription: {
           include: {
             user: true,
@@ -160,6 +170,9 @@ export class CollectionEventService {
     const events = await this.prisma.collectionEvent.findMany({
       where,
       include: {
+        disputeCase: {
+          include: { history: { orderBy: { createdAt: 'asc' } } },
+        },
         subscription: {
           select: { trackingId: true },
         },
@@ -213,6 +226,9 @@ export class CollectionEventService {
     const event = await this.prisma.collectionEvent.findUnique({
       where: { trackingId },
       include: {
+        disputeCase: {
+          include: { history: { orderBy: { createdAt: 'asc' } } },
+        },
         subscription: {
           include: {
             user: true,
@@ -235,6 +251,9 @@ export class CollectionEventService {
     const event = await this.prisma.collectionEvent.findUnique({
       where: { trackingId },
       include: {
+        disputeCase: {
+          include: { history: { orderBy: { createdAt: 'asc' } } },
+        },
         subscription: {
           include: { user: true },
         },
@@ -270,6 +289,9 @@ export class CollectionEventService {
     const event = await this.prisma.collectionEvent.findUnique({
       where: { trackingId },
       include: {
+        disputeCase: {
+          include: { history: { orderBy: { createdAt: 'asc' } } },
+        },
         subscription: {
           include: { user: true },
         },
@@ -294,10 +316,108 @@ export class CollectionEventService {
       data: {
         status: CollectionStatus.DISPUTED,
         disputeReason: dto.disputeReason,
+        disputeCase: {
+          create: {
+            history: {
+              create: {
+                action: DisputeHistoryAction.OPENED,
+                toStatus: DisputeStatus.OPEN,
+                reason: dto.disputeReason,
+                actorTrackingId: requestingUserTrackingId,
+              },
+            },
+          },
+        },
       },
+      include: { disputeCase: { include: { history: true } } },
     });
 
     return new CollectionEventResponse(updated);
+  }
+
+  async startDisputeReview(
+    trackingId: string,
+    requestingUser: RequestingUser,
+  ): Promise<CollectionEventResponse> {
+    const event = await this.prisma.collectionEvent.findUnique({
+      where: { trackingId },
+      include: { disputeCase: true },
+    });
+    if (
+      !event ||
+      event.status !== CollectionStatus.DISPUTED ||
+      !event.disputeCase
+    ) {
+      throw new NotFoundException('Dispute not found');
+    }
+    if (event.disputeCase.status === DisputeStatus.RESOLVED) {
+      throw new BadRequestException('Dispute already resolved');
+    }
+    if (event.disputeCase.status === DisputeStatus.OPEN) {
+      await this.prisma.disputeCase.update({
+        where: { id: event.disputeCase.id },
+        data: {
+          status: DisputeStatus.IN_REVIEW,
+          assignedTo: requestingUser.trackingId,
+          history: {
+            create: {
+              action: DisputeHistoryAction.REVIEW_STARTED,
+              fromStatus: DisputeStatus.OPEN,
+              toStatus: DisputeStatus.IN_REVIEW,
+              actorTrackingId: requestingUser.trackingId,
+            },
+          },
+        },
+      });
+    }
+    return this.findOne(trackingId, requestingUser);
+  }
+
+  async resolveDispute(
+    trackingId: string,
+    dto: ResolveDisputeDto,
+    requestingUser: RequestingUser,
+  ): Promise<CollectionEventResponse> {
+    const event = await this.prisma.collectionEvent.findUnique({
+      where: { trackingId },
+      include: { disputeCase: true },
+    });
+    if (
+      !event ||
+      event.status !== CollectionStatus.DISPUTED ||
+      !event.disputeCase
+    ) {
+      throw new NotFoundException('Dispute not found');
+    }
+    if (event.disputeCase.status === DisputeStatus.RESOLVED) {
+      throw new BadRequestException('Dispute already resolved');
+    }
+
+    const measure = dto.measure ?? DisputeMeasure.NONE;
+    await this.prisma.disputeCase.update({
+      where: { id: event.disputeCase.id },
+      data: {
+        status: DisputeStatus.RESOLVED,
+        decision: dto.decision,
+        resolutionReason: dto.reason.trim(),
+        measure,
+        assignedTo: event.disputeCase.assignedTo ?? requestingUser.trackingId,
+        resolvedBy: requestingUser.trackingId,
+        resolvedAt: new Date(),
+        history: {
+          create: {
+            action: DisputeHistoryAction.RESOLVED,
+            fromStatus: event.disputeCase.status,
+            toStatus: DisputeStatus.RESOLVED,
+            decision: dto.decision,
+            reason: dto.reason.trim(),
+            measure,
+            actorTrackingId: requestingUser.trackingId,
+          },
+        },
+      },
+    });
+    return this.findOne(trackingId, requestingUser);
   }
 
   private async assertCanCreateEvent(

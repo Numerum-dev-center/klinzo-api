@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { YeriaApp } from '@numerum-tech/yeriasdk';
+import { YERIA_API_PREFIX } from './yeria-contract';
 
 let publicAppInstance: YeriaApp | null = null;
 let agentAppInstance: YeriaApp | null = null;
@@ -63,7 +64,7 @@ export function getYeriaPublicApp(): YeriaApp {
     appId: serviceId,
     privateKey,
     publicKey,
-    baseUrl: `${serviceBaseUrl}/yeria`,
+    baseUrl: `${serviceBaseUrl}${YERIA_API_PREFIX}`,
     viewExpirationMinutes: 120,
   });
 
@@ -83,7 +84,7 @@ export function getYeriaAgentApp(): YeriaApp {
     appId: serviceId,
     privateKey,
     publicKey,
-    baseUrl: `${serviceBaseUrl}/yeria/agent`,
+    baseUrl: `${serviceBaseUrl}${YERIA_API_PREFIX}/agent`,
     viewExpirationMinutes: 120,
   });
 

@@ -48,8 +48,9 @@ export class UserService {
   }
 
   async create(createUserDto: any): Promise<UserEntity> {
+    const normalizedEmail = createUserDto.email.trim().toLowerCase();
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: createUserDto.email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -79,6 +80,8 @@ export class UserService {
     const user = await this.prisma.user.create({
       data: {
         ...rest,
+        email: normalizedEmail,
+        emailVerified: rest.emailVerified ?? true,
         role,
         password: hashedPassword,
         ...(collectorId ? { collector: { connect: { id: collectorId } } } : {}),

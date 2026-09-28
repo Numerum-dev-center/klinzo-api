@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  UnauthorizedException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,10 +16,7 @@ import { createOffersListPage } from './pages/offers-list.page';
 import { createOfferDetailPage } from './pages/offer-detail.page';
 import { createSubscribeFormPage } from './pages/subscribe-form.page';
 import { createSubscriptionQRPage } from './pages/subscription-qr.page';
-import {
-  createMySubscriptionsLookupForm,
-  createMySubscriptionsListPage,
-} from './pages/my-subscriptions.page';
+import { createMySubscriptionsListPage } from './pages/my-subscriptions.page';
 import {
   createSearchZonePage,
   createSearchResultsPage,
@@ -242,7 +240,7 @@ export class YeriaService {
   }
 
   // 5. Affichage d'un QR code de bac / souscription
-  async getSubscriptionQR(trackingId: string) {
+  async getSubscriptionQR(trackingId: string, user?: UserEntity) {
     const sub = await this.prisma.subscription.findFirst({
       where: {
         OR: [{ trackingId }, { qrCodeId: trackingId }],
@@ -255,6 +253,11 @@ export class YeriaService {
 
     if (!sub) {
       throw new NotFoundException('Abonnement / QR code introuvable');
+    }
+    if (!user || sub.user.trackingId !== user.trackingId) {
+      throw new ForbiddenException(
+        'Vous ne pouvez consulter que vos propres abonnements.',
+      );
     }
 
     const view = await createSubscriptionQRPage(sub);
@@ -327,52 +330,22 @@ export class YeriaService {
       return this.publicApp.serve(view);
     }
 
-    const view = createMySubscriptionsLookupForm();
-    return this.publicApp.serve(view);
+    throw new UnauthorizedException(
+      'Authentification Yeria requise pour consulter vos abonnements.',
+    );
   }
 
   // 7b. Consultation de mes abonnements par filtre (POST)
   async findMySubscriptions(
-    body: { email?: string; subscriptionId?: string },
+    _body: { email?: string; subscriptionId?: string },
     user?: UserEntity,
   ) {
-    let subscriptions: any[] = [];
-
-    if (user) {
-      return this.getMySubscriptions(user);
+    if (!user) {
+      throw new UnauthorizedException(
+        'Authentification Yeria requise pour consulter vos abonnements.',
+      );
     }
-
-    if (body.subscriptionId) {
-      const sub = await this.prisma.subscription.findFirst({
-        where: {
-          OR: [
-            { trackingId: body.subscriptionId.trim() },
-            { qrCodeId: body.subscriptionId.trim() },
-          ],
-        },
-        include: {
-          offer: true,
-        },
-      });
-      if (sub) subscriptions.push(sub);
-    } else if (body.email) {
-      const targetUser = await this.prisma.user.findUnique({
-        where: { email: body.email.trim() },
-      });
-      if (targetUser) {
-        subscriptions = await this.prisma.subscription.findMany({
-          where: { userId: targetUser.id },
-          include: {
-            offer: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 20,
-        });
-      }
-    }
-
-    const view = createMySubscriptionsListPage(subscriptions);
-    return this.publicApp.serve(view);
+    return this.getMySubscriptions(user);
   }
 
   // =========================================================================
@@ -420,8 +393,8 @@ export class YeriaService {
 
   // 3. Tournées : Liste des tournées (GET /yeria/agent/tours)
   async getAgentTours(collector: any) {
-    const collectorId = collector?.id;
-    const where = collectorId ? { vehicle: { collectorId } } : {};
+    const collectorId = this.requireAgentCollectorId(collector);
+    const where = { vehicle: { collectorId } };
 
     const tours = await this.prisma.tour.findMany({
       where,
@@ -599,7 +572,8 @@ export class YeriaService {
       return this.agentApp.serve(view);
     }
 
-    if (collector?.id && subscription.offer.collectorId !== collector.id) {
+    const agentCollectorId = this.requireAgentCollectorId(collector);
+    if (subscription.offer.collectorId !== agentCollectorId) {
       const view = createAgentScanResultPage(
         false,
         "Ce bac n'appartient pas à votre collecteur.",
@@ -620,7 +594,7 @@ export class YeriaService {
 
     if (!tour) {
       // Chercher une tournée en cours pour le collecteur
-      const collectorId = collector?.id || subscription.offer.collectorId;
+      const collectorId = agentCollectorId;
       tour = await this.prisma.tour.findFirst({
         where: {
           vehicle: { collectorId },
@@ -722,8 +696,8 @@ export class YeriaService {
 
   // 5. Historique des collectes (GET /yeria/agent/history)
   async getAgentCollectionHistory(collector: any) {
-    const collectorId = collector?.id;
-    const where = collectorId ? { tour: { vehicle: { collectorId } } } : {};
+    const collectorId = this.requireAgentCollectorId(collector);
+    const where = { tour: { vehicle: { collectorId } } };
 
     const events = await this.prisma.collectionEvent.findMany({
       where,
@@ -736,6 +710,15 @@ export class YeriaService {
 
     const view = createAgentCollectionHistoryPage(events);
     return this.agentApp.serve(view);
+  }
+
+  private requireAgentCollectorId(
+    collector: { id?: bigint } | null | undefined,
+  ): bigint {
+    if (!collector?.id) {
+      throw new ForbiddenException('Agent terrain sans collecteur rattaché.');
+    }
+    return collector.id;
   }
 
   private assertAgentCollectorScope(
