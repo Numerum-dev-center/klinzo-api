@@ -50,6 +50,9 @@ export class CollectionEventResponse {
   };
 
   @ApiProperty()
+  hasRating: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -64,6 +67,7 @@ export class CollectionEventResponse {
           collector?: CollectionEventResponse['collector'];
         };
       };
+      rating?: { trackingId?: string } | null;
     };
 
     this.trackingId = partial.trackingId!;
@@ -98,6 +102,7 @@ export class CollectionEventResponse {
           frequency: source.subscription.offer.frequency,
         }
       : partial.offer;
+    this.hasRating = Boolean(source.rating);
     this.createdAt = partial.createdAt!;
     this.updatedAt = partial.updatedAt!;
   }

@@ -105,6 +105,41 @@ export class CollectionEventService {
     return new PageDto(entities, pageMetaDto);
   }
 
+  async findAllMine(
+    pageOptionsDto: PageOptionsDto,
+    requestingUserTrackingId: string,
+  ): Promise<PageDto<CollectionEventResponse>> {
+    const where = {
+      subscription: {
+        user: { trackingId: requestingUserTrackingId },
+      },
+    };
+    const itemCount = await this.prisma.collectionEvent.count({ where });
+    const events = await this.prisma.collectionEvent.findMany({
+      where,
+      include: {
+        rating: { select: { trackingId: true } },
+        subscription: {
+          include: {
+            user: true,
+            offer: {
+              include: { collector: true },
+            },
+          },
+        },
+      },
+      skip: pageOptionsDto.skip,
+      take: pageOptionsDto.take,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+    return new PageDto(
+      events.map((event) => new CollectionEventResponse(event)),
+      pageMetaDto,
+    );
+  }
+
   async findAllByTour(
     tourTrackingId: string,
     pageOptionsDto: PageOptionsDto,

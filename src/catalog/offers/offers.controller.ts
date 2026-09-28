@@ -86,6 +86,19 @@ export class OffersController {
     );
   }
 
+  @Get('collector/:collectorTrackingId/subscribable')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.USAGER)
+  findSubscribableByCollector(
+    @Param('collectorTrackingId') collectorTrackingId: string,
+    @Query() pageOptionsDto: PageOptionsDto,
+  ) {
+    return this.offersService.findSubscribableByCollector(
+      collectorTrackingId,
+      pageOptionsDto,
+    );
+  }
+
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(

@@ -10,6 +10,7 @@ import {
 
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/requests/create-subscription.dto';
+import { SubscribeDto } from './dto/requests/subscribe.dto';
 import { UpdateSubscriptionDto } from './dto/requests/update-subscription.dto';
 import { Query } from '@nestjs/common';
 import { UseGuards } from '@nestjs/common';
@@ -33,6 +34,13 @@ export class SubscriptionsController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   create(@Body() createSubscriptionDto: CreateSubscriptionDto) {
     return this.subscriptionsService.create(createSubscriptionDto);
+  }
+
+  @Post('subscribe')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.USAGER)
+  subscribe(@Body() dto: SubscribeDto, @CurrentUser() user: RequestingUser) {
+    return this.subscriptionsService.subscribe(dto, user.trackingId);
   }
 
   @Get()

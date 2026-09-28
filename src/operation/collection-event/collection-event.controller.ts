@@ -51,6 +51,19 @@ export class CollectionEventController {
     return this.collectionEventService.findAll(pageOptionsDto);
   }
 
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.USAGER)
+  findMine(
+    @Query() pageOptionsDto: PageOptionsDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectionEventService.findAllMine(
+      pageOptionsDto,
+      user.trackingId,
+    );
+  }
+
   @Get('tour/:tourTrackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(

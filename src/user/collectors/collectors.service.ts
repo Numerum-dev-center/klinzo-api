@@ -20,6 +20,7 @@ import {
   isCollectorRole,
   RequestingUser,
 } from '../../shared/security/requesting-user';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class CollectorsService {
@@ -64,6 +65,12 @@ export class CollectorsService {
       where: { trackingId },
     });
     if (!collector) throw new NotFoundException('Collector not found');
+    if (
+      requestingUser?.role === Role.USAGER &&
+      (!collector.isActive || collector.kycStatus !== KycStatus.APPROVED)
+    ) {
+      throw new NotFoundException('Collector not found');
+    }
     if (requestingUser) {
       await this.assertCanAccessCollector(collector.id, requestingUser);
     }

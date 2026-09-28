@@ -3,11 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { KycStatus, Role } from '@prisma/client';
+import { KycStatus, Role, SubscriptionStatus } from '@prisma/client';
 import * as crypto from 'crypto';
 import { SubscriptionRepository } from './subscriptions.repository';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateSubscriptionDto } from './dto/requests/create-subscription.dto';
+import { SubscribeDto } from './dto/requests/subscribe.dto';
 import { UpdateSubscriptionDto } from './dto/requests/update-subscription.dto';
 import { CreateSubscriptionDataDto } from './dto/requests/create-subscription-data.dto';
 import { SubscriptionEntity } from './entities/subscription.entity';
@@ -68,6 +69,70 @@ export class SubscriptionsService {
     };
 
     return this.subscriptionRepository.create(data);
+  }
+
+  async subscribe(dto: SubscribeDto, userTrackingId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { trackingId: userTrackingId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const offer = await this.prisma.offer.findUnique({
+      where: { trackingId: dto.offerTrackingId },
+      include: { collector: true },
+    });
+    if (!offer) throw new NotFoundException('Offer not found');
+    if (
+      !offer.isActive ||
+      !offer.collector.isActive ||
+      offer.collector.kycStatus !== KycStatus.APPROVED
+    ) {
+      throw new BadRequestException('Offer is not available for subscription');
+    }
+
+    const existing = await this.prisma.subscription.findFirst({
+      where: {
+        userId: user.id,
+        offerId: offer.id,
+        status: {
+          in: [
+            SubscriptionStatus.PENDING_PAYMENT,
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAUSED,
+          ],
+        },
+      },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        'You already have a current subscription for this offer',
+      );
+    }
+
+    const startDate = new Date(dto.startDate);
+    const nextBillingDate = new Date(startDate);
+    const frequency = offer.frequency.toUpperCase();
+    if (frequency.includes('WEEK')) {
+      nextBillingDate.setDate(nextBillingDate.getDate() + 7);
+    } else if (frequency.includes('YEAR') || frequency.includes('ANNU')) {
+      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+    } else {
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+    }
+
+    const created = await this.subscriptionRepository.create({
+      qrCodeId: `QR-${crypto.randomUUID()}`,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      addressText: dto.addressText,
+      status: SubscriptionStatus.ACTIVE,
+      startDate,
+      nextBillingDate,
+      userId: user.id,
+      offerId: offer.id,
+    });
+
+    return this.toResponseDto(created);
   }
 
   async findAll(

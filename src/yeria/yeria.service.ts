@@ -286,7 +286,11 @@ export class YeriaService {
       select: { city: true },
     });
     const cities = Array.from(
-      new Set(zones.map((z) => z.city).filter(Boolean)),
+      new Set(
+        zones
+          .map((z) => z.city)
+          .filter((city): city is string => Boolean(city)),
+      ),
     );
     const view = createSearchZonePage(cities);
     return this.publicApp.serve(view);

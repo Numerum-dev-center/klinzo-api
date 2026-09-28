@@ -121,6 +121,38 @@ export class OffersService {
     return new PageDto(entities, pageMetaDto);
   }
 
+  async findSubscribableByCollector(
+    collectorTrackingId: string,
+    pageOptionsDto: PageOptionsDto,
+  ): Promise<PageDto<OfferEntity>> {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId: collectorTrackingId },
+    });
+    if (
+      !collector ||
+      !collector.isActive ||
+      collector.kycStatus !== KycStatus.APPROVED
+    ) {
+      throw new NotFoundException('Collector not found');
+    }
+
+    const where = { collectorId: collector.id, isActive: true };
+    const [itemCount, offers] = await Promise.all([
+      this.prisma.offer.count({ where }),
+      this.prisma.offer.findMany({
+        where,
+        skip: pageOptionsDto.skip,
+        take: pageOptionsDto.take,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+    const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto });
+    return new PageDto(
+      offers.map((offer) => new OfferEntity(offer)),
+      pageMetaDto,
+    );
+  }
+
   async findOne(
     trackingId: string,
     requestingUser: RequestingUser,
