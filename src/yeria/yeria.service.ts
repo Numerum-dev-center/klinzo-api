@@ -1151,6 +1151,15 @@ export class YeriaService {
     });
   }
 
+  private requireAgentCollectorId(
+    collector: { id?: bigint } | null | undefined,
+  ): bigint {
+    if (!collector?.id) {
+      throw new ForbiddenException('Agent terrain sans collecteur rattaché.');
+    }
+    return collector.id;
+  }
+
   private assertAgentCollectorScope(
     resourceCollectorId: bigint,
     collector: { id?: bigint } | null | undefined,
