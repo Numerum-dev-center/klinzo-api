@@ -21,6 +21,7 @@ import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
 import { Role, FinancialDocumentType } from '@prisma/client';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { FinancialDocumentPageOptionsDto } from './dto/requests/financial-document-page-options.dto';
 import { CurrentUser } from '../../shared/security/current-user.decorator';
 import type { RequestingUser } from '../../shared/security/requesting-user';
 
@@ -55,11 +56,8 @@ export class FinancialDocumentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.SUPPORT_SAAS)
   @ApiQuery({ name: 'type', enum: FinancialDocumentType, required: false })
-  findAll(
-    @Query() pageOptionsDto: PageOptionsDto,
-    @Query('type') type?: FinancialDocumentType,
-  ) {
-    return this.financialDocumentsService.findAll(pageOptionsDto, type);
+  findAll(@Query() pageOptionsDto: FinancialDocumentPageOptionsDto) {
+    return this.financialDocumentsService.findAll(pageOptionsDto, pageOptionsDto.type);
   }
 
   @Get('collector/:collectorTrackingId')

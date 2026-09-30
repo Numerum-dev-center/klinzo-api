@@ -146,6 +146,77 @@ export class UserService {
     return new PageDto(entities, pageMetaDto);
   }
 
+  async getHistory(trackingId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { trackingId },
+      include: {
+        subscriptions: {
+          include: {
+            offer: {
+              include: {
+                collector: { select: { companyName: true } },
+              },
+            },
+            transactions: { orderBy: { timestamp: 'desc' } },
+            collectionEvents: {
+              include: { tour: { select: { reference: true } } },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with trackingId ${trackingId} not found`);
+    }
+
+    const subscriptions = user.subscriptions.map((s) => ({
+      trackingId: s.trackingId,
+      status: s.status,
+      startDate: s.startDate,
+      addressText: s.addressText,
+      offer: {
+        name: s.offer.name,
+        collector: { companyName: s.offer.collector.companyName },
+      },
+    }));
+
+    const transactions = user.subscriptions.flatMap((s) =>
+      s.transactions.map((t) => ({
+        trackingId: t.trackingId,
+        amount: t.amount,
+        status: t.status,
+        timestamp: t.timestamp,
+        offerName: s.offer.name,
+      })),
+    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const collections = user.subscriptions.flatMap((s) =>
+      s.collectionEvents.map((e) => ({
+        trackingId: e.trackingId,
+        status: e.status,
+        executedAt: e.executedAt,
+        createdAt: e.createdAt,
+        offerName: s.offer.name,
+        collector: { companyName: s.offer.collector.companyName },
+        tour: e.tour ? { reference: e.tour.reference } : null,
+      })),
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return {
+      summary: {
+        subscriptions: subscriptions.length,
+        activeSubscriptions: subscriptions.filter((s) => s.status === 'ACTIVE').length,
+        transactions: transactions.length,
+        collections: collections.length,
+      },
+      subscriptions,
+      transactions,
+      collections,
+    };
+  }
+
   async findOne(trackingId: string): Promise<UserEntity> {
     const user = await this.prisma.user.findUnique({
       where: { trackingId },

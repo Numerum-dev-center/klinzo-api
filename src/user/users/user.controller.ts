@@ -60,6 +60,13 @@ class UserController {
     );
   }
 
+  @Get(':trackingId/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  getHistory(@Param('trackingId') trackingId: string) {
+    return this.userService.getHistory(trackingId);
+  }
+
   @Get(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
