@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CreateCollectorDto } from './dto/requests/create-collector.dto';
 import { UpdateCollectorDto } from './dto/requests/update-collector.dto';
@@ -20,7 +21,7 @@ import {
   isCollectorRole,
   RequestingUser,
 } from '../../shared/security/requesting-user';
-import { Role } from '@prisma/client';
+import { KycDocumentType, Role } from '@prisma/client';
 
 @Injectable()
 export class CollectorsService {
@@ -67,7 +68,7 @@ export class CollectorsService {
     if (!collector) throw new NotFoundException('Collector not found');
     if (
       requestingUser?.role === Role.USAGER &&
-      (!collector.isActive || collector.kycStatus !== KycStatus.APPROVED)
+      (!collector.isActive || collector.kycStatus !== 'APPROVED')
     ) {
       throw new NotFoundException('Collector not found');
     }
@@ -82,6 +83,15 @@ export class CollectorsService {
     updateCollectorDto: UpdateCollectorDto,
     requestingUser: RequestingUser,
   ): Promise<CollectorResponse> {
+    if (
+      isCollectorRole(requestingUser.role) &&
+      (updateCollectorDto.kycStatus !== undefined ||
+        updateCollectorDto.isActive !== undefined)
+    ) {
+      throw new ForbiddenException(
+        'Un collecteur ne peut pas modifier son statut KYC ou son activation.',
+      );
+    }
     await this.findOne(trackingId, requestingUser);
     const updated = await this.prisma.collector.update({
       where: { trackingId },
@@ -236,6 +246,157 @@ export class CollectorsService {
     const pageMetaDto = new PageMetaDto({ itemCount, pageOptionsDto: kycDto });
     const entities = collectors.map((c) => new CollectorResponse(c as any));
     return new PageDto(entities, pageMetaDto);
+  }
+
+  async getKycDossier(trackingId: string, requestingUser: RequestingUser) {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId },
+      include: {
+        kycDocuments: {
+          select: {
+            trackingId: true,
+            createdAt: true,
+            type: true,
+            fileName: true,
+            mimeType: true,
+            size: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        kycDecisions: {
+          select: {
+            trackingId: true,
+            createdAt: true,
+            status: true,
+            reason: true,
+            decidedBy: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+    if (!collector) throw new NotFoundException('Collector not found');
+    await this.assertCanAccessCollector(collector.id, requestingUser);
+    const { id: _id, ...dossier } = collector;
+    return dossier;
+  }
+
+  async addKycDocument(
+    trackingId: string,
+    type: KycDocumentType,
+    file: {
+      originalname: string;
+      mimetype: string;
+      size: number;
+      buffer: Buffer;
+    },
+    requestingUser: RequestingUser,
+  ) {
+    if (!file) throw new BadRequestException('Document requis.');
+    const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Format non autorisé. Utilisez PDF, JPEG ou PNG.',
+      );
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('Le document ne doit pas dépasser 5 Mo.');
+    }
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId },
+    });
+    if (!collector) throw new NotFoundException('Collector not found');
+    await this.assertCanAccessCollector(collector.id, requestingUser);
+
+    const document = await this.prisma.kycDocument.create({
+      data: {
+        type,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        content: Uint8Array.from(file.buffer),
+        uploadedBy: requestingUser.trackingId,
+        collectorId: collector.id,
+      },
+      select: {
+        trackingId: true,
+        createdAt: true,
+        type: true,
+        fileName: true,
+        mimeType: true,
+        size: true,
+      },
+    });
+    await this.prisma.collector.update({
+      where: { id: collector.id },
+      data: { kycStatus: KycStatus.PENDING_REVIEW, isActive: false },
+    });
+    return document;
+  }
+
+  async getKycDocument(
+    collectorTrackingId: string,
+    documentTrackingId: string,
+    requestingUser: RequestingUser,
+  ) {
+    const document = await this.prisma.kycDocument.findFirst({
+      where: {
+        trackingId: documentTrackingId,
+        collector: { trackingId: collectorTrackingId },
+      },
+      include: { collector: { select: { id: true } } },
+    });
+    if (!document) throw new NotFoundException('Document KYC introuvable.');
+    await this.assertCanAccessCollector(document.collector.id, requestingUser);
+    return document;
+  }
+
+  async decideKyc(
+    trackingId: string,
+    status: KycStatus.APPROVED | KycStatus.REJECTED,
+    reason: string,
+    decidedBy: string,
+  ) {
+    const collector = await this.prisma.collector.findUnique({
+      where: { trackingId },
+      include: { kycDocuments: { select: { type: true } } },
+    });
+    if (!collector) throw new NotFoundException('Collector not found');
+    const documentTypes = new Set(
+      collector.kycDocuments.map((document) => document.type),
+    );
+    const required = [
+      KycDocumentType.IDENTITY,
+      KycDocumentType.REGISTRATION,
+      KycDocumentType.VEHICLE,
+    ];
+    if (
+      status === KycStatus.APPROVED &&
+      required.some((type) => !documentTypes.has(type))
+    ) {
+      throw new BadRequestException(
+        'Les pièces identité, enregistrement et véhicule sont requises avant approbation.',
+      );
+    }
+    const normalizedReason = reason.trim();
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.kycDecision.create({
+        data: {
+          status,
+          reason: normalizedReason,
+          decidedBy,
+          collectorId: collector.id,
+        },
+      });
+      await transaction.collector.update({
+        where: { id: collector.id },
+        data: { kycStatus: status, isActive: status === KycStatus.APPROVED },
+      });
+    });
+    return this.getKycDossier(trackingId, {
+      trackingId: decidedBy,
+      role: Role.GESTIONNAIRE_SAAS,
+    });
   }
 
   private async assertCanAccessCollector(

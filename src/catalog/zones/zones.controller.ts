@@ -28,7 +28,7 @@ export class ZonesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   create(
     @Body() createZoneDto: CreateZoneDto,
     @CurrentUser() user: RequestingUser,
@@ -41,6 +41,33 @@ export class ZonesController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   findAll() {
     return this.zonesService.findAll();
+  }
+
+  @Get('available')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN_COLLECTEUR)
+  findAvailable(@CurrentUser() user: RequestingUser) {
+    return this.zonesService.findAvailableForCollector(user);
+  }
+
+  @Post(':trackingId/select')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN_COLLECTEUR)
+  select(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.zonesService.selectForCollector(trackingId, user);
+  }
+
+  @Delete(':trackingId/select')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN_COLLECTEUR)
+  unselect(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.zonesService.unselectForCollector(trackingId, user);
   }
 
   @Get('collector/:collectorTrackingId')
@@ -75,7 +102,7 @@ export class ZonesController {
 
   @Patch(':trackingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   update(
     @Param('trackingId') trackingId: string,
     @Body() updateZoneDto: UpdateZoneDto,

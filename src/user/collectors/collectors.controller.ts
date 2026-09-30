@@ -1,24 +1,29 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  ClassSerializerInterceptor,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
-  ClassSerializerInterceptor,
-  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Role } from '@prisma/client';
 import { CollectorsService } from './collectors.service';
 import { CreateCollectorDto } from './dto/requests/create-collector.dto';
 import { UpdateCollectorDto } from './dto/requests/update-collector.dto';
+import { KycDocumentDto } from './dto/requests/kyc-document.dto';
+import { KycDecisionDto } from './dto/requests/kyc-decision.dto';
 import { JwtAuthGuard } from '../../shared/security/jwt-auth.guard';
 import { RolesGuard } from '../../shared/security/roles.guard';
 import { Roles } from '../../shared/security/roles.decorator';
-import { Role } from '@prisma/client';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
 import { SearchCollectorDto } from './dto/requests/search-collector.dto';
 import { KycStatusFilterDto } from './dto/requests/kyc-status-filter.dto';
@@ -36,50 +41,123 @@ export class CollectorsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  create(@Body() createCollectorDto: CreateCollectorDto) {
-    return this.collectorsService.create(createCollectorDto);
+  create(@Body() dto: CreateCollectorDto) {
+    return this.collectorsService.create(dto);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  findAll(@Query() pageOptionsDto: PageOptionsDto) {
-    return this.collectorsService.findAll(pageOptionsDto);
+  findAll(@Query() dto: PageOptionsDto) {
+    return this.collectorsService.findAll(dto);
   }
 
   @Get('search')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  search(@Query() searchDto: SearchCollectorDto) {
-    return this.collectorsService.search(searchDto);
+  search(@Query() dto: SearchCollectorDto) {
+    return this.collectorsService.search(dto);
   }
 
   @Get('active')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS, Role.USAGER)
-  findActive(@Query() pageOptionsDto: PageOptionsDto) {
-    return this.collectorsService.getActiveCollectors(pageOptionsDto);
+  findActive(@Query() dto: PageOptionsDto) {
+    return this.collectorsService.getActiveCollectors(dto);
   }
 
   @Get('inactive')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  findInactive(@Query() pageOptionsDto: PageOptionsDto) {
-    return this.collectorsService.getInactiveCollectors(pageOptionsDto);
+  findInactive(@Query() dto: PageOptionsDto) {
+    return this.collectorsService.getInactiveCollectors(dto);
   }
 
   @Get('types')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  getTypes(@Query() typeDto: TypeFilterDto) {
-    return this.collectorsService.findByType(typeDto);
+  getTypes(@Query() dto: TypeFilterDto) {
+    return this.collectorsService.findByType(dto);
   }
 
   @Get('kyc-statuses')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  getKycStatuses(@Query() kycDto: KycStatusFilterDto) {
-    return this.collectorsService.findByKycStatus(kycDto);
+  getKycStatuses(@Query() dto: KycStatusFilterDto) {
+    return this.collectorsService.findByKycStatus(dto);
+  }
+
+  @Get(':trackingId/kyc')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  getKycDossier(
+    @Param('trackingId') trackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectorsService.getKycDossier(trackingId, user);
+  }
+
+  @Post(':trackingId/kyc/documents')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN_COLLECTEUR)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  addKycDocument(
+    @Param('trackingId') trackingId: string,
+    @Body() dto: KycDocumentDto,
+    @UploadedFile()
+    file: {
+      originalname: string;
+      mimetype: string;
+      size: number;
+      buffer: Buffer;
+    },
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectorsService.addKycDocument(
+      trackingId,
+      dto.type,
+      file,
+      user,
+    );
+  }
+
+  @Get(':trackingId/kyc/documents/:documentTrackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
+  async downloadKycDocument(
+    @Param('trackingId') trackingId: string,
+    @Param('documentTrackingId') documentTrackingId: string,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    const document = await this.collectorsService.getKycDocument(
+      trackingId,
+      documentTrackingId,
+      user,
+    );
+    const safeName = document.fileName.replace(/["\r\n]/g, '_');
+    return new StreamableFile(document.content, {
+      type: document.mimeType,
+      disposition: `attachment; filename="${safeName}"`,
+      length: document.size,
+    });
+  }
+
+  @Post(':trackingId/kyc/decision')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  decideKyc(
+    @Param('trackingId') trackingId: string,
+    @Body() dto: KycDecisionDto,
+    @CurrentUser() user: RequestingUser,
+  ) {
+    return this.collectorsService.decideKyc(
+      trackingId,
+      dto.status,
+      dto.reason,
+      user.trackingId,
+    );
   }
 
   @Get(':trackingId')
@@ -94,10 +172,7 @@ export class CollectorsController {
     @Param('trackingId') trackingId: string,
     @CurrentUser() user: RequestingUser,
   ) {
-    return this.collectorsService.findOne(trackingId, {
-      trackingId: user.trackingId,
-      role: user.role,
-    });
+    return this.collectorsService.findOne(trackingId, user);
   }
 
   @Patch(':trackingId')
@@ -105,13 +180,10 @@ export class CollectorsController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.ADMIN_COLLECTEUR, Role.GESTIONNAIRE_SAAS)
   update(
     @Param('trackingId') trackingId: string,
-    @Body() updateCollectorDto: UpdateCollectorDto,
+    @Body() dto: UpdateCollectorDto,
     @CurrentUser() user: RequestingUser,
   ) {
-    return this.collectorsService.update(trackingId, updateCollectorDto, {
-      trackingId: user.trackingId,
-      role: user.role,
-    });
+    return this.collectorsService.update(trackingId, dto, user);
   }
 
   @Delete(':trackingId')

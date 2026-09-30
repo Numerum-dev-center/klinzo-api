@@ -36,3 +36,7 @@ corepack pnpm exec jest --config ./test/jest-e2e.json --runInBand
 ## Configuration
 
 Le fichier `.env.example` décrit les variables prises en charge. `.env` est ignoré par Git. En production, `DATABASE_URL`, les secrets JWT, `CORS_ORIGIN`, `BACKEND_URL` et les clés PEM Yeria sont obligatoires. En développement, Yeria génère ses clés sous `storage/keys/` au premier usage.
+
+## Contrat mobile Yeria
+
+La base canonique du contrat stable est `/api/v1/yeria` ; `/yeria` reste un alias temporaire. Le manifeste est exposé sur `GET /api/v1/yeria/contract`. La documentation d’intégration se trouve dans [`docs/yeria-api-v1.md`](docs/yeria-api-v1.md) et son historique dans [`docs/yeria-changelog.md`](docs/yeria-changelog.md).

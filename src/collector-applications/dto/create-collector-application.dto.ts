@@ -1,4 +1,10 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { CollectorType } from '@prisma/client';
 
 export class CreateCollectorApplicationDto {

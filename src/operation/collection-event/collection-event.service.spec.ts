@@ -13,6 +13,10 @@ describe('CollectionEventService', () => {
   const prismaServiceMock = {
     subscription: {
       findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    disputeCase: {
+      update: jest.fn(),
     },
     collectionEvent: {
       count: jest.fn(),
@@ -185,5 +189,111 @@ describe('CollectionEventService', () => {
     expect(response.offer).not.toHaveProperty('id');
     expect(response.offer).not.toHaveProperty('collectorId');
     expect(response.collector).not.toHaveProperty('id');
+  });
+
+  it('moves an open dispute to review and records the admin actor', async () => {
+    const now = new Date('2026-09-28T10:00:00.000Z');
+    prismaServiceMock.collectionEvent.findUnique
+      .mockResolvedValueOnce({
+        trackingId: 'event-1',
+        status: 'DISPUTED',
+        disputeCase: { id: BigInt(7), status: 'OPEN' },
+      })
+      .mockResolvedValueOnce({
+        trackingId: 'event-1',
+        status: 'DISPUTED',
+        disputeReason: 'Non collecte',
+        subscription: {
+          trackingId: 'sub-1',
+          user: { trackingId: 'user-1' },
+          offer: { collectorId: BigInt(2), collector: {} },
+        },
+        disputeCase: {
+          trackingId: 'case-1',
+          status: 'IN_REVIEW',
+          measure: 'NONE',
+          createdAt: now,
+          updatedAt: now,
+          history: [],
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    prismaServiceMock.disputeCase.update.mockResolvedValue({});
+
+    const result = await service.startDisputeReview('event-1', {
+      trackingId: 'admin-1',
+      role: Role.SUPPORT_SAAS,
+    });
+
+    expect(prismaServiceMock.disputeCase.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: BigInt(7) },
+        data: expect.objectContaining({
+          status: 'IN_REVIEW',
+          assignedTo: 'admin-1',
+        }),
+      }),
+    );
+    expect(result.dispute?.status).toBe('IN_REVIEW');
+  });
+
+  it('persists a resolution with its reason and history entry', async () => {
+    const now = new Date('2026-09-28T10:00:00.000Z');
+    prismaServiceMock.collectionEvent.findUnique
+      .mockResolvedValueOnce({
+        trackingId: 'event-1',
+        status: 'DISPUTED',
+        disputeCase: {
+          id: BigInt(7),
+          status: 'IN_REVIEW',
+          assignedTo: 'admin-1',
+        },
+      })
+      .mockResolvedValueOnce({
+        trackingId: 'event-1',
+        status: 'DISPUTED',
+        disputeReason: 'Non collecte',
+        subscription: {
+          trackingId: 'sub-1',
+          user: { trackingId: 'user-1' },
+          offer: { collectorId: BigInt(2), collector: {} },
+        },
+        disputeCase: {
+          trackingId: 'case-1',
+          status: 'RESOLVED',
+          decision: 'USER_FAVORED',
+          resolutionReason: 'Preuve insuffisante',
+          measure: 'WARNING_COLLECTOR',
+          createdAt: now,
+          updatedAt: now,
+          resolvedAt: now,
+          history: [],
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    prismaServiceMock.disputeCase.update.mockResolvedValue({});
+
+    const result = await service.resolveDispute(
+      'event-1',
+      {
+        decision: 'USER_FAVORED' as any,
+        reason: '  Preuve insuffisante  ',
+        measure: 'WARNING_COLLECTOR' as any,
+      },
+      { trackingId: 'admin-1', role: Role.GESTIONNAIRE_SAAS },
+    );
+
+    expect(prismaServiceMock.disputeCase.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'RESOLVED',
+          resolutionReason: 'Preuve insuffisante',
+          resolvedBy: 'admin-1',
+        }),
+      }),
+    );
+    expect(result.dispute?.decision).toBe('USER_FAVORED');
   });
 });

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { YeriaApp } from '@numerum-tech/yeriasdk';
+import { YERIA_API_PREFIX } from './yeria-contract';
 
 let publicAppInstance: YeriaApp | null = null;
 let agentAppInstance: YeriaApp | null = null;

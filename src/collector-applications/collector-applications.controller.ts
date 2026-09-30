@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PageOptionsDto } from '../shared/pagination/dto/requests/page-options.dto';
 import { JwtAuthGuard } from '../shared/security/jwt-auth.guard';
@@ -9,6 +19,7 @@ import { RolesGuard } from '../shared/security/roles.guard';
 import { ActivateCollectorAccountDto } from './dto/activate-collector-account.dto';
 import { CreateCollectorApplicationDto } from './dto/create-collector-application.dto';
 import { RejectCollectorApplicationDto } from './dto/reject-collector-application.dto';
+import { UpdateCollectorApplicationEmailDto } from './dto/update-collector-application-email.dto';
 import { CollectorApplicationsService } from './collector-applications.service';
 
 @Controller('collector-applications')
@@ -46,8 +57,21 @@ export class CollectorApplicationsController {
   @Patch(':trackingId/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  reject(@Param('trackingId') trackingId: string, @Body() dto: RejectCollectorApplicationDto) {
+  reject(
+    @Param('trackingId') trackingId: string,
+    @Body() dto: RejectCollectorApplicationDto,
+  ) {
     return this.applications.reject(trackingId, dto.reason);
+  }
+
+  @Patch(':trackingId/email')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  updateEmail(
+    @Param('trackingId') trackingId: string,
+    @Body() dto: UpdateCollectorApplicationEmailDto,
+  ) {
+    return this.applications.updateEmail(trackingId, dto.email);
   }
 
   @Post(':trackingId/resend-invitation')
@@ -55,5 +79,12 @@ export class CollectorApplicationsController {
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
   resendInvitation(@Param('trackingId') trackingId: string) {
     return this.applications.resendInvitation(trackingId);
+  }
+
+  @Delete(':trackingId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
+  remove(@Param('trackingId') trackingId: string) {
+    return this.applications.remove(trackingId);
   }
 }

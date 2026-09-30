@@ -202,6 +202,103 @@ export class CollectorApplicationsService {
     return { trackingId, status: CollectorApplicationStatus.REJECTED };
   }
 
+  async updateEmail(trackingId: string, email: string) {
+    const application = await this.prisma.collectorApplication.findUnique({
+      where: { trackingId },
+    });
+    if (!application) throw new NotFoundException('Candidature introuvable.');
+    if (application.activatedAt) {
+      throw new BadRequestException(
+        'Le compte est déjà activé. L’adresse doit être modifiée depuis les paramètres du compte.',
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail === application.contactEmail) {
+      throw new BadRequestException(
+        'Cette adresse e-mail est déjà utilisée par la candidature.',
+      );
+    }
+
+    const [otherApplication, emailOwner, collectorOwner] = await Promise.all([
+      this.prisma.collectorApplication.findFirst({
+        where: {
+          contactEmail: normalizedEmail,
+          trackingId: { not: trackingId },
+        },
+        select: { id: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { trackingId: true },
+      }),
+      this.prisma.collector.findFirst({
+        where: { contactEmail: normalizedEmail },
+        select: { trackingId: true },
+      }),
+    ]);
+    if (
+      otherApplication ||
+      (emailOwner && emailOwner.trackingId !== application.userTrackingId) ||
+      (collectorOwner &&
+        collectorOwner.trackingId !== application.collectorTrackingId)
+    ) {
+      throw new ConflictException('Cette adresse e-mail est déjà utilisée.');
+    }
+
+    if (application.status === CollectorApplicationStatus.PENDING) {
+      await this.prisma.collectorApplication.update({
+        where: { trackingId },
+        data: { contactEmail: normalizedEmail },
+      });
+      return {
+        trackingId,
+        contactEmail: normalizedEmail,
+        invitationSent: false,
+      };
+    }
+    if (application.status !== CollectorApplicationStatus.APPROVED) {
+      throw new BadRequestException(
+        'L’adresse d’une candidature refusée ne peut pas être modifiée.',
+      );
+    }
+    if (!application.userTrackingId || !application.collectorTrackingId) {
+      throw new BadRequestException('Compte collecteur associé introuvable.');
+    }
+
+    const token = newToken();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.collectorApplication.update({
+        where: { trackingId },
+        data: {
+          contactEmail: normalizedEmail,
+          inviteTokenHash: hashToken(token),
+          inviteExpiresAt: new Date(
+            Date.now() + INVITATION_HOURS * 60 * 60 * 1000,
+          ),
+          invitedAt: null,
+        },
+      });
+      await tx.user.update({
+        where: { trackingId: application.userTrackingId! },
+        data: { email: normalizedEmail, emailVerified: false },
+      });
+      await tx.collector.update({
+        where: { trackingId: application.collectorTrackingId! },
+        data: { contactEmail: normalizedEmail },
+      });
+    });
+
+    const invitationSent = await this.sendInvitation(normalizedEmail, token);
+    if (invitationSent) {
+      await this.prisma.collectorApplication.update({
+        where: { trackingId },
+        data: { invitedAt: new Date() },
+      });
+    }
+    return { trackingId, contactEmail: normalizedEmail, invitationSent };
+  }
+
   async resendInvitation(trackingId: string) {
     const application = await this.prisma.collectorApplication.findUnique({
       where: { trackingId },
@@ -237,6 +334,50 @@ export class CollectorApplicationsService {
       });
     }
     return { trackingId, invitationSent };
+  }
+
+  async remove(trackingId: string) {
+    const application = await this.prisma.collectorApplication.findUnique({
+      where: { trackingId },
+      select: {
+        trackingId: true,
+        activatedAt: true,
+        userTrackingId: true,
+        collectorTrackingId: true,
+      },
+    });
+    if (!application) throw new NotFoundException('Candidature introuvable.');
+    if (application.activatedAt) {
+      throw new BadRequestException(
+        'Le compte est déjà activé. Gérez ce collecteur depuis sa fiche.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.collectorApplication.deleteMany({
+        where: { trackingId, activatedAt: null },
+      });
+      if (deleted.count !== 1) {
+        throw new BadRequestException(
+          'Le compte vient d’être activé et ne peut plus être supprimé ici.',
+        );
+      }
+      if (application.userTrackingId) {
+        await tx.user.deleteMany({
+          where: { trackingId: application.userTrackingId, isActive: false },
+        });
+      }
+      if (application.collectorTrackingId) {
+        await tx.collector.deleteMany({
+          where: {
+            trackingId: application.collectorTrackingId,
+            users: { none: {} },
+          },
+        });
+      }
+    });
+
+    return { trackingId, deleted: true };
   }
 
   async activate(dto: ActivateCollectorAccountDto) {

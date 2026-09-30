@@ -16,33 +16,33 @@ enum Role {
 }
 
 model User {
-  id                 BigInt         @id @default(autoincrement())
-  trackingId         String         @unique @default(uuid())
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  firstName          String
-  lastName           String
-  email              String         @unique
-  emailVerified      Boolean        @default(false)
-  emailVerificationCodeHash String?
+  id                         BigInt          @id @default(autoincrement())
+  trackingId                 String          @unique @default(uuid())
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+  firstName                  String
+  lastName                   String
+  email                      String          @unique
+  emailVerified              Boolean         @default(false)
+  emailVerificationCodeHash  String?
   emailVerificationExpiresAt DateTime?
-  emailVerificationSentAt DateTime?
-  emailVerificationAttempts Int @default(0)
-  passwordResetCodeHash String?
-  passwordResetExpiresAt DateTime?
-  passwordResetSentAt DateTime?
-  passwordResetAttempts Int @default(0)
-  sessionVersion Int @default(0)
-  phone              String
-  password           String
-  hashedRefreshToken String?
-  role               Role           @default(USAGER)
-  isActive           Boolean        @default(true)
-  collectorId        BigInt?
-  collector          Collector?     @relation(fields: [collectorId], references: [id])
-  subscriptions      Subscription[]
-  ratings            Rating[]
-  pickupRequests     PickupRequest[]
+  emailVerificationSentAt    DateTime?
+  emailVerificationAttempts  Int             @default(0)
+  passwordResetCodeHash      String?
+  passwordResetExpiresAt     DateTime?
+  passwordResetSentAt        DateTime?
+  passwordResetAttempts      Int             @default(0)
+  sessionVersion             Int             @default(0)
+  phone                      String
+  password                   String
+  hashedRefreshToken         String?
+  role                       Role            @default(USAGER)
+  isActive                   Boolean         @default(true)
+  collectorId                BigInt?
+  collector                  Collector?      @relation(fields: [collectorId], references: [id])
+  subscriptions              Subscription[]
+  ratings                    Rating[]
+  pickupRequests             PickupRequest[]
 }
 
 enum KycStatus {
@@ -147,20 +147,20 @@ model Offer {
 }
 
 model Collector {
-  id                 BigInt          @id @default(autoincrement())
-  trackingId         String          @unique @default(uuid())
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                 BigInt              @id @default(autoincrement())
+  trackingId         String              @unique @default(uuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   companyName        String
   registrationNumber String
   contactEmail       String
   contactPhone       String
   type               CollectorType
   adresse            String
-  kycStatus          KycStatus       @default(PENDING_REVIEW)
-  ratingAverage      Float           @default(0.0)
+  kycStatus          KycStatus           @default(PENDING_REVIEW)
+  ratingAverage      Float               @default(0.0)
   payoutAccount      String?
-  isActive           Boolean         @default(true)
+  isActive           Boolean             @default(true)
   users              User[]
   vehicles           Vehicle[]
   collectorZones     CollectorZone[]
@@ -168,6 +168,44 @@ model Collector {
   ratings            Rating[]
   financialDocuments FinancialDocument[]
   pickupRequests     PickupRequest[]
+  kycDocuments       KycDocument[]
+  kycDecisions       KycDecision[]
+}
+
+enum KycDocumentType {
+  IDENTITY
+  REGISTRATION
+  VEHICLE
+  OTHER
+}
+
+model KycDocument {
+  id          BigInt          @id @default(autoincrement())
+  trackingId  String          @unique @default(uuid())
+  createdAt   DateTime        @default(now())
+  type        KycDocumentType
+  fileName    String
+  mimeType    String
+  size        Int
+  content     Bytes
+  uploadedBy  String
+  collectorId BigInt
+  collector   Collector       @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@index([collectorId, createdAt])
+}
+
+model KycDecision {
+  id          BigInt    @id @default(autoincrement())
+  trackingId  String    @unique @default(uuid())
+  createdAt   DateTime  @default(now())
+  status      KycStatus
+  reason      String
+  decidedBy   String
+  collectorId BigInt
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@index([collectorId, createdAt])
 }
 
 enum PickupRequestStatus {
@@ -178,26 +216,26 @@ enum PickupRequestStatus {
 }
 
 model PickupRequest {
-  id              BigInt              @id @default(autoincrement())
-  trackingId      String              @unique @default(uuid())
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  status          PickupRequestStatus @default(NEW)
-  wasteType       String
-  addressText     String
-  latitude        Float?
-  longitude       Float?
-  preferredDate   DateTime?
-  scheduledDate   DateTime?
-  completedAt     DateTime?
-  estimatedPrice  Float?
-  finalPrice      Float?
-  notes           String?
+  id                 BigInt              @id @default(autoincrement())
+  trackingId         String              @unique @default(uuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  status             PickupRequestStatus @default(NEW)
+  wasteType          String
+  addressText        String
+  latitude           Float?
+  longitude          Float?
+  preferredDate      DateTime?
+  scheduledDate      DateTime?
+  completedAt        DateTime?
+  estimatedPrice     Float?
+  finalPrice         Float?
+  notes              String?
   cancellationReason String?
-  userId          BigInt
-  user            User                @relation(fields: [userId], references: [id])
-  collectorId     BigInt
-  collector       Collector           @relation(fields: [collectorId], references: [id])
+  userId             BigInt
+  user               User                @relation(fields: [userId], references: [id])
+  collectorId        BigInt
+  collector          Collector           @relation(fields: [collectorId], references: [id])
 }
 
 model Subscription {
@@ -219,8 +257,8 @@ model Subscription {
   userId  BigInt
   offerId BigInt
 
-  user  User  @relation(fields: [userId], references: [id])
-  offer Offer @relation(fields: [offerId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+  offer            Offer             @relation(fields: [offerId], references: [id])
   collectionEvents CollectionEvent[]
   transactions     Transaction[]
 }
@@ -240,17 +278,17 @@ enum TourStatus {
 }
 
 model Tour {
-  id              BigInt     @id @default(autoincrement())
-  trackingId      String     @unique @default(uuid())
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  reference       String     @unique
-  scheduledDate   DateTime
-  actualStartTime DateTime?
-  actualEndTime   DateTime?
-  status          TourStatus @default(PLANNED)
-  vehicleId       BigInt
-  vehicle         Vehicle    @relation(fields: [vehicleId], references: [id])
+  id               BigInt            @id @default(autoincrement())
+  trackingId       String            @unique @default(uuid())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  reference        String            @unique
+  scheduledDate    DateTime
+  actualStartTime  DateTime?
+  actualEndTime    DateTime?
+  status           TourStatus        @default(PLANNED)
+  vehicleId        BigInt
+  vehicle          Vehicle           @relation(fields: [vehicleId], references: [id])
   collectionEvents CollectionEvent[]
 }
 
@@ -261,12 +299,36 @@ enum CollectionStatus {
   CANCELLED
 }
 
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+}
+
+enum DisputeDecision {
+  USER_FAVORED
+  COLLECTOR_FAVORED
+  INCONCLUSIVE
+}
+
+enum DisputeMeasure {
+  NONE
+  WARNING_COLLECTOR
+  SUSPEND_COLLECTOR
+}
+
+enum DisputeHistoryAction {
+  OPENED
+  REVIEW_STARTED
+  RESOLVED
+}
+
 model CollectionEvent {
-  id                     BigInt           @id @default(autoincrement())
-  trackingId             String           @unique @default(uuid())
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
-  status                 CollectionStatus @default(PENDING)
+  id                     BigInt                                @id @default(autoincrement())
+  trackingId             String                                @unique @default(uuid())
+  createdAt              DateTime                              @default(now())
+  updatedAt              DateTime                              @updatedAt
+  status                 CollectionStatus                      @default(PENDING)
   executedAt             DateTime?
   gpsProof               Unsupported("geography(Point,4326)")?
   photoUrl               String?
@@ -274,10 +336,47 @@ model CollectionEvent {
   autoValidationDeadline DateTime?
   disputeReason          String?
   tourId                 BigInt
-  tour                   Tour             @relation(fields: [tourId], references: [id])
+  tour                   Tour                                  @relation(fields: [tourId], references: [id])
   subscriptionId         BigInt
-  subscription           Subscription     @relation(fields: [subscriptionId], references: [id])
+  subscription           Subscription                          @relation(fields: [subscriptionId], references: [id])
   rating                 Rating?
+  disputeCase            DisputeCase?
+}
+
+model DisputeCase {
+  id                BigInt           @id @default(autoincrement())
+  trackingId        String           @unique @default(uuid())
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  status            DisputeStatus    @default(OPEN)
+  decision          DisputeDecision?
+  resolutionReason  String?
+  measure           DisputeMeasure   @default(NONE)
+  assignedTo        String?
+  resolvedBy        String?
+  resolvedAt        DateTime?
+  collectionEventId BigInt           @unique
+  collectionEvent   CollectionEvent  @relation(fields: [collectionEventId], references: [id], onDelete: Cascade)
+  history           DisputeHistory[]
+
+  @@index([status, createdAt])
+}
+
+model DisputeHistory {
+  id              BigInt               @id @default(autoincrement())
+  trackingId      String               @unique @default(uuid())
+  createdAt       DateTime             @default(now())
+  action          DisputeHistoryAction
+  fromStatus      DisputeStatus?
+  toStatus        DisputeStatus
+  decision        DisputeDecision?
+  reason          String?
+  measure         DisputeMeasure?
+  actorTrackingId String
+  disputeCaseId   BigInt
+  disputeCase     DisputeCase          @relation(fields: [disputeCaseId], references: [id], onDelete: Cascade)
+
+  @@index([disputeCaseId, createdAt])
 }
 
 model Rating {
@@ -296,21 +395,21 @@ model Rating {
 }
 
 model Transaction {
-  id                  BigInt             @id @default(autoincrement())
-  trackingId          String             @unique @default(uuid())
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  id                  BigInt              @id @default(autoincrement())
+  trackingId          String              @unique @default(uuid())
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   amount              Float
   platformCommission  Float
   paymentGatewayRef   String?
   status              String
   invoicePdfUrl       String?
-  timestamp           DateTime           @default(now())
+  timestamp           DateTime            @default(now())
   subscriptionId      BigInt
-  subscription        Subscription       @relation(fields: [subscriptionId], references: [id])
+  subscription        Subscription        @relation(fields: [subscriptionId], references: [id])
   financialDocumentId BigInt?
-  financialDocument   FinancialDocument? @relation(fields: [financialDocumentId], references: [id])
-  bankStatementLines   BankStatementLine[]
+  financialDocument   FinancialDocument?  @relation(fields: [financialDocumentId], references: [id])
+  bankStatementLines  BankStatementLine[]
 }
 
 enum BankStatementLineStatus {
@@ -320,19 +419,19 @@ enum BankStatementLineStatus {
 }
 
 model BankStatementLine {
-  id              BigInt                  @id @default(autoincrement())
-  trackingId      String                  @unique @default(uuid())
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  statementDate   DateTime
-  label           String
-  amount          Float
-  reference       String?
-  source          String?
-  status          BankStatementLineStatus @default(UNMATCHED)
-  transactionId   BigInt?
-  transaction     Transaction?            @relation(fields: [transactionId], references: [id])
-  matchedAt       DateTime?
+  id            BigInt                  @id @default(autoincrement())
+  trackingId    String                  @unique @default(uuid())
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  statementDate DateTime
+  label         String
+  amount        Float
+  reference     String?
+  source        String?
+  status        BankStatementLineStatus @default(UNMATCHED)
+  transactionId BigInt?
+  transaction   Transaction?            @relation(fields: [transactionId], references: [id])
+  matchedAt     DateTime?
 
   @@index([status, statementDate])
   @@index([reference])
@@ -385,16 +484,16 @@ enum CommunicationCampaignStatus {
 }
 
 model MessageTemplate {
-  id         BigInt               @id @default(autoincrement())
-  trackingId String               @unique @default(uuid())
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  id         BigInt                  @id @default(autoincrement())
+  trackingId String                  @unique @default(uuid())
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
   name       String
   channel    CommunicationChannel
-  language   String               @default("fr")
+  language   String                  @default("fr")
   subject    String?
   content    String
-  isActive   Boolean              @default(true)
+  isActive   Boolean                 @default(true)
   campaigns  CommunicationCampaign[]
 }
 

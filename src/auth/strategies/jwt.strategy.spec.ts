@@ -76,22 +76,39 @@ describe('JwtStrategy', () => {
 
   it('rejects an existing token when the user email is unverified', async () => {
     (userServiceMock.findByTrackingIdForAuth as jest.Mock).mockResolvedValue({
-      trackingId: 'user-2', email: 'pending@example.com',
-      role: Role.USAGER, isActive: true, emailVerified: false,
+      trackingId: 'user-2',
+      email: 'pending@example.com',
+      role: Role.USAGER,
+      isActive: true,
+      emailVerified: false,
     });
     const strategy = new JwtStrategy(configServiceMock, userServiceMock);
-    await expect(strategy.validate({ sub: 'user-2', email: 'pending@example.com', role: Role.USAGER }))
-      .rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      strategy.validate({
+        sub: 'user-2',
+        email: 'pending@example.com',
+        role: Role.USAGER,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('rejects a token issued before a password reset', async () => {
     (userServiceMock.findByTrackingIdForAuth as jest.Mock).mockResolvedValue({
-      trackingId: 'user-3', email: 'user@example.com',
-      role: Role.USAGER, isActive: true, emailVerified: true, sessionVersion: 1,
+      trackingId: 'user-3',
+      email: 'user@example.com',
+      role: Role.USAGER,
+      isActive: true,
+      emailVerified: true,
+      sessionVersion: 1,
     });
     const strategy = new JwtStrategy(configServiceMock, userServiceMock);
-    await expect(strategy.validate({
-      sub: 'user-3', email: 'user@example.com', role: Role.USAGER, sessionVersion: 0,
-    })).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      strategy.validate({
+        sub: 'user-3',
+        email: 'user@example.com',
+        role: Role.USAGER,
+        sessionVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

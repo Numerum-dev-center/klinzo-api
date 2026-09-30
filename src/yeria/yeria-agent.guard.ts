@@ -14,7 +14,7 @@ import {
 } from '@numerum-tech/yeriasdk';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { UserEntity } from '../user/users/entities/user.entity';
-import { Role, CollectorType } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { getYeriaAgentApp, getYeriaAgentServiceId } from './yeria.config';
 
 function parseJwtClaims(token: string): any {
@@ -108,67 +108,22 @@ export class YeriaAgentGuard implements CanActivate {
 
       const email =
         profile?.email || claims?.email || `agent-${sub}@klinzo.local`;
-      const lastName = profile?.last_name || claims?.last_name || 'Terrain';
-      const firstName = profile?.first_name || claims?.first_name || 'Agent';
-
       const existing = await this.prisma.user.findUnique({
         where: { email },
         include: { collector: true },
       });
 
-      if (existing) {
+      if (existing?.collectorId) {
         user = existing;
       } else {
-        // Associer au premier collecteur disponible ou en créer un par défaut
-        let collector = await this.prisma.collector.findFirst();
-        if (!collector) {
-          collector = await this.prisma.collector.create({
-            data: {
-              companyName: 'Klinzo Collecte Partenaire',
-              registrationNumber: 'RC-KLZ-DEFAULT',
-              contactEmail: 'contact@klinzo.app',
-              contactPhone: '+225 01 02 03 04 05',
-              type: CollectorType.COMPANY,
-              adresse: 'Abidjan',
-            },
-          });
-        }
-
-        const dummyPassword = await bcrypt.hash(
-          crypto.randomBytes(32).toString('hex'),
-          10,
+        throw new UnauthorizedException(
+          'Agent terrain non provisionné par son collecteur.',
         );
-        user = await this.prisma.user.create({
-          data: {
-            trackingId: String(sub),
-            email,
-            password: dummyPassword,
-            firstName,
-            lastName,
-            phone: claims?.phone || '0000000000',
-            role: Role.AGENT_COLLECTEUR,
-            emailVerified: true,
-            isActive: true,
-            collectorId: collector.id,
-          },
-          include: { collector: true },
-        });
       }
     } else if (!user.collectorId) {
-      if (isProduction) {
-        throw new UnauthorizedException(
-          'Agent terrain sans collecteur rattaché.',
-        );
-      }
-
-      const collector = await this.prisma.collector.findFirst();
-      if (collector) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data: { collectorId: collector.id },
-          include: { collector: true },
-        });
-      }
+      throw new UnauthorizedException(
+        'Agent terrain sans collecteur rattaché.',
+      );
     }
 
     if (

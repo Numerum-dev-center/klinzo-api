@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { KycDocumentType, Role } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CollectorType } from './entities/enums/collector-type.enum';
 import { KycStatus } from './entities/enums/kyc-status.enum';
@@ -81,6 +82,17 @@ describe('CollectorsService', () => {
     expect(prismaServiceMock.collector.update).not.toHaveBeenCalled();
   });
 
+  it('prevents a collector administrator from approving their own KYC', async () => {
+    await expect(
+      service.update(
+        'collector-1',
+        { kycStatus: KycStatus.APPROVED },
+        { trackingId: 'user-1', role: Role.ADMIN_COLLECTEUR },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prismaServiceMock.collector.update).not.toHaveBeenCalled();
+  });
+
   it('lists only active collectors with approved KYC status', async () => {
     prismaServiceMock.collector.count.mockResolvedValue(1);
     prismaServiceMock.collector.findMany.mockResolvedValue([collector]);
@@ -101,5 +113,36 @@ describe('CollectorsService', () => {
       }),
     );
     expect(result.data).toHaveLength(1);
+  });
+  it('refuses KYC approval while required documents are missing', async () => {
+    prismaServiceMock.collector.findUnique.mockResolvedValue({
+      ...collector,
+      kycDocuments: [{ type: KycDocumentType.IDENTITY }],
+    });
+
+    await expect(
+      service.decideKyc(
+        'collector-1',
+        KycStatus.APPROVED,
+        'Dossier conforme',
+        'admin-1',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects an unsupported KYC file format', async () => {
+    await expect(
+      service.addKycDocument(
+        'collector-1',
+        KycDocumentType.IDENTITY,
+        {
+          originalname: 'identity.exe',
+          mimetype: 'application/octet-stream',
+          size: 12,
+          buffer: Buffer.from('invalid'),
+        },
+        { trackingId: 'user-1', role: Role.ADMIN_COLLECTEUR },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
