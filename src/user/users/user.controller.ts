@@ -20,6 +20,7 @@ import { Roles } from '../../shared/security/roles.decorator';
 import { Role } from '@prisma/client';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { UserPageOptionsDto } from './dto/requests/user-page-options.dto';
 import { CurrentUser } from '../../shared/security/current-user.decorator';
 import type { RequestingUser } from '../../shared/security/requesting-user';
 
@@ -40,7 +41,7 @@ class UserController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN_SAAS, Role.GESTIONNAIRE_SAAS)
-  findAll(@Query() pageOptionsDto: PageOptionsDto) {
+  findAll(@Query() pageOptionsDto: UserPageOptionsDto) {
     return this.userService.findAll(pageOptionsDto);
   }
 

@@ -10,6 +10,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { UserEntity } from './entities/user.entity';
 import { PageOptionsDto } from '../../shared/pagination/dto/requests/page-options.dto';
+import { UserPageOptionsDto } from './dto/requests/user-page-options.dto';
 import { PageMetaDto } from '../../shared/pagination/dto/requests/page-meta.dto';
 import { PageDto } from '../../shared/pagination/dto/requests/page.dto';
 import {
@@ -91,9 +92,20 @@ export class UserService {
     return new UserEntity(user);
   }
 
-  async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<UserEntity>> {
-    const itemCount = await this.prisma.user.count();
+  async findAll(pageOptionsDto: UserPageOptionsDto): Promise<PageDto<UserEntity>> {
+    const where: any = {};
+    if (pageOptionsDto.role) where.role = pageOptionsDto.role;
+    if (pageOptionsDto.isActive !== undefined) where.isActive = pageOptionsDto.isActive;
+    if (pageOptionsDto.search) {
+      where.OR = [
+        { firstName: { contains: pageOptionsDto.search, mode: 'insensitive' } },
+        { lastName: { contains: pageOptionsDto.search, mode: 'insensitive' } },
+        { email: { contains: pageOptionsDto.search, mode: 'insensitive' } },
+      ];
+    }
+    const itemCount = await this.prisma.user.count({ where });
     const users = await this.prisma.user.findMany({
+      where,
       skip: pageOptionsDto.skip,
       take: pageOptionsDto.take,
       orderBy: { createdAt: 'desc' },

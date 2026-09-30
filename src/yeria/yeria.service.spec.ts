@@ -26,8 +26,8 @@ jest.mock('@numerum-tech/yeriasdk', () => {
 });
 
 jest.mock('./yeria.config', () => ({
-  getYeriaPublicApp: () => ({ serve: jest.fn((view: unknown) => view) }),
-  getYeriaAgentApp: () => ({ serve: jest.fn((view: unknown) => view) }),
+  getYeriaPublicApp: () => ({ serve: jest.fn((view: unknown) => view), serveError: jest.fn((spec: unknown) => spec) }),
+  getYeriaAgentApp: () => ({ serve: jest.fn((view: unknown) => view), serveError: jest.fn((spec: unknown) => spec) }),
   getYeriaAbsoluteAssetUrl: (filename: string) => `/yeria-assets/${filename}`,
 }));
 
@@ -91,9 +91,8 @@ describe('YeriaService', () => {
   });
 
   it('rejects unauthenticated subscription lookup', async () => {
-    await expect(
-      service.findMySubscriptions({ email: 'victim@example.com' }),
-    ).rejects.toThrow('Authentification Yeria requise');
+    const result = await service.findMySubscriptions({ email: 'victim@example.com' });
+    expect(result).toMatchObject({ code: 'auth.required', status: 401 });
   });
 
   it('prevents a user from opening another user subscription QR', async () => {
