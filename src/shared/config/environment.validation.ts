@@ -11,6 +11,11 @@ const PRODUCTION_REQUIRED_VARIABLES = [
   'BACKEND_URL',
   'YERIA_PRIVATE_KEY',
   'YERIA_PUBLIC_KEY',
+] as const;
+
+// SMTP and FRONTEND_URL are optional — app starts without them;
+// email features return 503 when SMTP is unconfigured.
+const PRODUCTION_WARNED_VARIABLES = [
   'FRONTEND_URL',
   'SMTP_HOST',
   'SMTP_USER',
@@ -72,6 +77,16 @@ export function validateEnvironment(
   if (missingInProduction.length > 0) {
     throw new Error(
       `Missing production environment variable(s): ${missingInProduction.join(', ')}`,
+    );
+  }
+
+  const warnedInProduction = isProduction
+    ? PRODUCTION_WARNED_VARIABLES.filter((key) => !readEnv(config, key))
+    : [];
+
+  if (warnedInProduction.length > 0) {
+    console.warn(
+      `[config] Optional variable(s) not set: ${warnedInProduction.join(', ')}. Email features will be unavailable.`,
     );
   }
 
